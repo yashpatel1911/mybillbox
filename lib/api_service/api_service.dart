@@ -4,8 +4,10 @@ import '../DBHelper/session_manager.dart';
 import '../DBHelper/wp-api.dart';
 import '../model/category_model.dart';
 import '../model/employee_model.dart';
+import '../model/expense/expense_category_model.dart';
 import '../model/product_model.dart';
 import '../model/profile_model.dart';
+import '../model/shop_category_model.dart';
 
 class ServiceDB {
   final SessionManager setting = SessionManager();
@@ -263,10 +265,198 @@ class ServiceDB {
       if (existingPassword != null) 'existing_password': existingPassword,
     };
 
-    return await Api.post(
-      Environment().changePassword,
-      body,
-      token: _token,
-    ) as Map<String, dynamic>;
+    return await Api.post(Environment().changePassword, body, token: _token)
+        as Map<String, dynamic>;
+  }
+
+  // ─────────────────────────────────────────
+  // EXPENSE CATEGORY APIs
+  // ─────────────────────────────────────────
+
+  Future<List<ExpenseCategoryModel>> fetchExpenseCategory({
+    String? search,
+  }) async {
+    String url = Environment().fetchExpenseCategory;
+    if (search != null && search.trim().isNotEmpty) {
+      url += '?search=${Uri.encodeComponent(search.trim())}';
+    }
+
+    final response = await Api.get(url, token: _token) as Map<String, dynamic>;
+
+    if (response['status'] == true) {
+      return (response['data'] as List)
+          .map((e) => ExpenseCategoryModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<Map<String, dynamic>> createExpenseCategory({
+    required String expCatName,
+    String? expCatDescription,
+  }) async {
+    return await Api.post(Environment().createExpenseCategory, {
+          'exp_cat_name': expCatName,
+          if (expCatDescription != null)
+            'exp_cat_description': expCatDescription,
+        }, token: _token)
+        as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateExpenseCategory({
+    required int expCatId,
+    String? expCatName,
+    String? expCatDescription,
+    bool? isActive,
+  }) async {
+    final body = <String, dynamic>{};
+    if (expCatName != null) body['exp_cat_name'] = expCatName;
+    if (expCatDescription != null)
+      body['exp_cat_description'] = expCatDescription;
+    if (isActive != null) body['is_active'] = isActive.toString();
+
+    return await Api.patch(
+          '${Environment().updateExpenseCategory}$expCatId/',
+          body,
+          token: _token,
+        )
+        as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> deleteExpenseCategory(int expCatId) async {
+    return await Api.delete(
+          '${Environment().deleteExpenseCategory}$expCatId/',
+          token: _token,
+        )
+        as Map<String, dynamic>;
+  }
+
+  // ─────────────────────────────────────────
+  // EXPENSES APIs
+  // ─────────────────────────────────────────
+
+  Future<Map<String, dynamic>> fetchExpenses({
+    String filter = 'overall', // 'today' | 'overall'
+    String? search,
+    int? expCatId,
+    String? paymentMethod,
+  }) async {
+    final params = <String, String>{'filter': filter};
+    if (search != null && search.trim().isNotEmpty) {
+      params['search'] = search.trim();
+    }
+    if (expCatId != null) params['exp_cat_id'] = expCatId.toString();
+    if (paymentMethod != null) params['payment_method'] = paymentMethod;
+
+    final query = params.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+
+    final url = '${Environment().fetchExpenses}?$query';
+    final response = await Api.get(url, token: _token) as Map<String, dynamic>;
+    return response;
+  }
+
+  Future<Map<String, dynamic>> createExpense({
+    String? partyName,
+    required int expCatId,
+    required double amount,
+    required String paidOn, // 'YYYY-MM-DD'
+    required String paymentMethod, // 'CASH' | 'ONLINE'
+    String? notes,
+  }) async {
+    return await Api.post(Environment().createExpense, {
+          if (partyName != null && partyName.isNotEmpty)
+            'party_name': partyName,
+          'exp_cat_id': expCatId,
+          'amount': amount,
+          'paid_on': paidOn,
+          'payment_method': paymentMethod,
+          if (notes != null && notes.isNotEmpty) 'notes': notes,
+        }, token: _token)
+        as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateExpense({
+    required int expId,
+    String? partyName,
+    int? expCatId,
+    double? amount,
+    String? paidOn,
+    String? paymentMethod,
+    String? notes,
+    bool? isActive,
+  }) async {
+    final body = <String, dynamic>{};
+    if (partyName != null) body['party_name'] = partyName;
+    if (expCatId != null) body['exp_cat_id'] = expCatId;
+    if (amount != null) body['amount'] = amount;
+    if (paidOn != null) body['paid_on'] = paidOn;
+    if (paymentMethod != null) body['payment_method'] = paymentMethod;
+    if (notes != null) body['notes'] = notes;
+    if (isActive != null) body['is_active'] = isActive.toString();
+
+    return await Api.patch(
+          '${Environment().updateExpense}$expId/',
+          body,
+          token: _token,
+        )
+        as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> deleteExpense(int expId) async {
+    return await Api.delete(
+          '${Environment().deleteExpense}$expId/',
+          token: _token,
+        )
+        as Map<String, dynamic>;
+  }
+
+  // ──────────────────────────────────────────────────
+  // SHOP CATEGORIES
+  // ──────────────────────────────────────────────────
+
+  Future<List<ShopCategoryModel>> fetchShopCategories() async {
+    final response =
+        await Api.get(Environment().shopCategories, token: _token)
+            as Map<String, dynamic>;
+
+    if (response['status'] == true) {
+      return (response['data'] as List)
+          .map((e) => ShopCategoryModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  // ──────────────────────────────────────────────────
+  // SHOP
+  // ──────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> createShop({
+    required String shName,
+    required String shContactNo,
+    required String shAddress,
+    required int shCategoryId,
+    String? shEmail,
+    String? gstNo,
+    File? shLogo,
+  }) async {
+    final fields = <String, String>{
+      'sh_name': shName,
+      'sh_contact_no': shContactNo,
+      'sh_address': shAddress,
+      'sh_category_id': shCategoryId.toString(),
+    };
+    if (shEmail != null && shEmail.isNotEmpty) fields['sh_email'] = shEmail;
+    if (gstNo != null && gstNo.isNotEmpty) fields['gst_no'] = gstNo;
+
+    return await Api.uploadFiles(
+          Environment().createShop,
+          fields: fields,
+          files: shLogo != null ? {'sh_logo': shLogo.path} : {},
+          token: _token,
+        )
+        as Map<String, dynamic>;
   }
 }

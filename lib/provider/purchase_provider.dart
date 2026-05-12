@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import '../model/invoice_details/dashboard_stats_model.dart';
-import '../model/invoice_details/invoice_model.dart';
-import '../model/invoice_details/invoice_payment_model.dart';
-import '../api_service/invoice_api_service.dart';
+import 'package:mybillbox/api_service/purchase_api_service.dart';
+import '../model/purchase_details/purchase_dashboard_stats_model.dart';
+import '../model/purchase_details/purchase_model.dart';
+import '../model/purchase_details/purchase_payment_model.dart';
 
-class InvoiceProvider extends ChangeNotifier {
+class PurchaseProvider extends ChangeNotifier {
   // ── Service ────────────────────────────────────
-  final InvoiceApiService _api = InvoiceApiService();
+  final PurchaseApiService _api = PurchaseApiService();
 
-  // ── Invoice State ──────────────────────────────
-  List<InvoiceModel> invoices = [];
-  List<InvoiceModel> todayInvoices = [];
-  List<InvoiceModel> allInvoices = [];
-  InvoiceModel? selectedInvoice;
+  // ── Purchase State ─────────────────────────────
+  List<PurchaseModel> purchases = [];
+  List<PurchaseModel> todayPurchases = [];
+  List<PurchaseModel> allPurchase = [];
+  PurchaseModel? selectedPurchase;
 
   bool isLoading = false;
   bool isLoadingMore = false;
@@ -35,13 +35,14 @@ class InvoiceProvider extends ChangeNotifier {
   String? _activeDateTo;
 
   // ── Stats State ────────────────────────────────
-  DashboardStatsModel _stats = DashboardStatsModel.empty();
-  DashboardStatsWrapper _statsWrapper = DashboardStatsWrapper.empty();
+  PurchaseDashboardStatsModel _stats = PurchaseDashboardStatsModel.empty();
+  PurchaseDashboardStatsWrapper _statsWrapper =
+      PurchaseDashboardStatsWrapper.empty();
   bool _statsLoading = false;
 
-  DashboardStatsModel get stats => _stats;
+  PurchaseDashboardStatsModel get stats => _stats;
 
-  DashboardStatsWrapper get statsWrapper => _statsWrapper;
+  PurchaseDashboardStatsWrapper get statsWrapper => _statsWrapper;
 
   bool get statsLoading => _statsLoading;
 
@@ -55,7 +56,7 @@ class InvoiceProvider extends ChangeNotifier {
     try {
       _statsLoading = true;
       notifyListeners();
-      _statsWrapper = await _api.fetchDashboardStats(
+      _statsWrapper = await _api.fetchPurchaseDashboardStats(
         paymentStatus: paymentStatus,
         dateFrom: dateFrom,
         dateTo: dateTo,
@@ -70,8 +71,8 @@ class InvoiceProvider extends ChangeNotifier {
     }
   }
 
-  // ── FETCH INVOICES page 1 ─────────────────────
-  Future<void> fetchInvoices({
+  // ── FETCH PURCHASES page 1 ─────────────────────
+  Future<void> fetchPurchases({
     String? paymentStatus,
     String? dateFrom,
     String? dateTo,
@@ -89,7 +90,7 @@ class InvoiceProvider extends ChangeNotifier {
       _hasMoreAll = true;
       notifyListeners();
 
-      final data = await _api.fetchInvoicePage(
+      final data = await _api.fetchPurchasePage(
         page: 1,
         paymentStatus: paymentStatus,
         dateFrom: dateFrom,
@@ -98,20 +99,20 @@ class InvoiceProvider extends ChangeNotifier {
       );
 
       final todayMeta = data['today'] as Map<String, dynamic>;
-      todayInvoices = (todayMeta['invoices'] as List)
-          .map((e) => InvoiceModel.fromJson(e))
+      todayPurchases = (todayMeta['purchases'] as List)
+          .map((e) => PurchaseModel.fromJson(e))
           .toList();
       _hasMoreToday = todayMeta['has_next'] as bool;
 
       final allMeta = data['all_time'] as Map<String, dynamic>;
-      allInvoices = (allMeta['invoices'] as List)
-          .map((e) => InvoiceModel.fromJson(e))
+      allPurchase = (allMeta['purchases'] as List)
+          .map((e) => PurchaseModel.fromJson(e))
           .toList();
       _hasMoreAll = allMeta['has_next'] as bool;
-      invoices = allInvoices;
+      purchases = allPurchase;
     } catch (e) {
       errorMessage = e.toString();
-      print('fetchInvoices error: $e');
+      print('fetchPurchases error: $e');
     } finally {
       isLoading = false;
       notifyListeners();
@@ -125,7 +126,7 @@ class InvoiceProvider extends ChangeNotifier {
       isLoadingMore = true;
       notifyListeners();
       final nextPage = _todayPage + 1;
-      final data = await _api.fetchInvoicePage(
+      final data = await _api.fetchPurchasePage(
         page: nextPage,
         paymentStatus: _activeStatus,
         dateFrom: _activeDateFrom,
@@ -133,8 +134,8 @@ class InvoiceProvider extends ChangeNotifier {
         search: _activeSearch,
       );
       final todayMeta = data['today'] as Map<String, dynamic>;
-      todayInvoices.addAll(
-        (todayMeta['invoices'] as List).map((e) => InvoiceModel.fromJson(e)),
+      todayPurchases.addAll(
+        (todayMeta['purchases'] as List).map((e) => PurchaseModel.fromJson(e)),
       );
       _hasMoreToday = todayMeta['has_next'] as bool;
       _todayPage = nextPage;
@@ -153,7 +154,7 @@ class InvoiceProvider extends ChangeNotifier {
       isLoadingMore = true;
       notifyListeners();
       final nextPage = _allPage + 1;
-      final data = await _api.fetchInvoicePage(
+      final data = await _api.fetchPurchasePage(
         page: nextPage,
         paymentStatus: _activeStatus,
         dateFrom: _activeDateFrom,
@@ -161,10 +162,10 @@ class InvoiceProvider extends ChangeNotifier {
         search: _activeSearch,
       );
       final allMeta = data['all_time'] as Map<String, dynamic>;
-      allInvoices.addAll(
-        (allMeta['invoices'] as List).map((e) => InvoiceModel.fromJson(e)),
+      allPurchase.addAll(
+        (allMeta['purchases'] as List).map((e) => PurchaseModel.fromJson(e)),
       );
-      invoices = allInvoices;
+      purchases = allPurchase;
       _hasMoreAll = allMeta['has_next'] as bool;
       _allPage = nextPage;
     } catch (e) {
@@ -175,24 +176,24 @@ class InvoiceProvider extends ChangeNotifier {
     }
   }
 
-  // ── FETCH SINGLE INVOICE ──────────────────────
-  Future<InvoiceModel?> fetchInvoiceById(int invoiceId) async {
+  // ── FETCH SINGLE PURCHASE ─────────────────────
+  Future<PurchaseModel?> fetchPurchaseById(int purchaseId) async {
     try {
-      selectedInvoice = await _api.fetchInvoiceById(invoiceId);
+      selectedPurchase = await _api.fetchPurchaseById(purchaseId);
       notifyListeners();
-      return selectedInvoice;
+      return selectedPurchase;
     } catch (e) {
-      print('fetchInvoiceById error: $e');
+      print('fetchPurchaseById error: $e');
       return null;
     }
   }
 
-  // ── CREATE INVOICE ────────────────────────────
+  // ── CREATE PURCHASE ───────────────────────────
   // payments = [{'method': 'cash', 'amount': 300.0}, {'method': 'online', 'amount': 200.0}]
-  Future<Map<String, dynamic>> createInvoice({
+  Future<Map<String, dynamic>> createPurchase({
     required String customerName,
     required String customerMobile,
-    required String invoiceDate,
+    required String purchaseDate,
     required List<Map<String, dynamic>> items,
     String? notes,
     String? discountType,
@@ -201,10 +202,10 @@ class InvoiceProvider extends ChangeNotifier {
     List<Map<String, dynamic>> payments = const [],
     String? paymentDate,
   }) async {
-    final res = await _api.createInvoice(
+    final res = await _api.createPurchase(
       customerName: customerName,
       customerMobile: customerMobile,
-      invoiceDate: invoiceDate,
+      purchaseDate: purchaseDate,
       items: items,
       notes: notes,
       discountType: discountType,
@@ -214,34 +215,34 @@ class InvoiceProvider extends ChangeNotifier {
       paymentDate: paymentDate,
     );
     if (res['status'] == true) {
-      final newInvoice = InvoiceModel.fromJson(res['data']);
-      allInvoices.insert(0, newInvoice);
-      todayInvoices.insert(0, newInvoice);
-      invoices = allInvoices;
+      final newPurchase = PurchaseModel.fromJson(res['data']);
+      allPurchase.insert(0, newPurchase);
+      todayPurchases.insert(0, newPurchase);
+      purchases = allPurchase;
       notifyListeners();
     }
     return res;
   }
 
-  // ── UPDATE INVOICE ────────────────────────────
-  Future<Map<String, dynamic>> updateInvoice({
-    required int invoiceId,
+  // ── UPDATE PURCHASE ───────────────────────────
+  Future<Map<String, dynamic>> updatePurchase({
+    required int purchaseId,
     String? customerName,
     String? customerMobile,
     String? notes,
-    String? invoiceDate,
+    String? purchaseDate,
     List<Map<String, dynamic>>? items,
     String? discountType,
     double? discountValue,
     String? paymentStatus,
     List<Map<String, dynamic>> payments = const [],
   }) async {
-    final res = await _api.updateInvoice(
-      invoiceId: invoiceId,
+    final res = await _api.updatePurchase(
+      purchaseId: purchaseId,
       customerName: customerName,
       customerMobile: customerMobile,
       notes: notes,
-      invoiceDate: invoiceDate,
+      purchaseDate: purchaseDate,
       items: items,
       discountType: discountType,
       discountValue: discountValue,
@@ -249,15 +250,15 @@ class InvoiceProvider extends ChangeNotifier {
       payments: payments,
     );
     if (res['status'] == true) {
-      final updated = InvoiceModel.fromJson(res['data']);
-      final allIdx = allInvoices.indexWhere((e) => e.invoiceId == invoiceId);
-      if (allIdx != -1) allInvoices[allIdx] = updated;
-      final todayIdx = todayInvoices.indexWhere(
-        (e) => e.invoiceId == invoiceId,
+      final updated = PurchaseModel.fromJson(res['data']);
+      final allIdx = allPurchase.indexWhere((e) => e.purchaseId == purchaseId);
+      if (allIdx != -1) allPurchase[allIdx] = updated;
+      final todayIdx = todayPurchases.indexWhere(
+        (e) => e.purchaseId == purchaseId,
       );
-      if (todayIdx != -1) todayInvoices[todayIdx] = updated;
-      invoices = allInvoices;
-      selectedInvoice = updated;
+      if (todayIdx != -1) todayPurchases[todayIdx] = updated;
+      purchases = allPurchase;
+      selectedPurchase = updated;
 
       // ── Re-fetch stats so dashboard reflects updated amounts ──
       await fetchDashboardStats(
@@ -272,13 +273,13 @@ class InvoiceProvider extends ChangeNotifier {
     return res;
   }
 
-  // ── CANCEL INVOICE ────────────────────────────
-  Future<Map<String, dynamic>> cancelInvoice(int invoiceId) async {
-    final res = await _api.cancelInvoice(invoiceId);
+  // ── CANCEL PURCHASE ───────────────────────────
+  Future<Map<String, dynamic>> cancelPurchase(int purchaseId) async {
+    final res = await _api.cancelPurchase(purchaseId);
     if (res['status'] == true) {
-      allInvoices.removeWhere((e) => e.invoiceId == invoiceId);
-      todayInvoices.removeWhere((e) => e.invoiceId == invoiceId);
-      invoices = allInvoices;
+      allPurchase.removeWhere((e) => e.purchaseId == purchaseId);
+      todayPurchases.removeWhere((e) => e.purchaseId == purchaseId);
+      purchases = allPurchase;
       notifyListeners();
     }
     return res;
@@ -287,27 +288,27 @@ class InvoiceProvider extends ChangeNotifier {
   // ── ADD PAYMENT ───────────────────────────────
   // payments = [{'method': 'cash', 'amount': 300.0}, {'method': 'online', 'amount': 200.0}]
   Future<Map<String, dynamic>> addPayment({
-    required int invoiceId,
+    required int purchaseId,
     required List<Map<String, dynamic>> payments,
     String? paymentDate,
     String? note,
   }) async {
     final res = await _api.addPayment(
-      invoiceId: invoiceId,
+      purchaseId: purchaseId,
       payments: payments,
       paymentDate: paymentDate,
       note: note,
     );
     if (res['status'] == true) {
-      await fetchInvoiceById(invoiceId);
+      await fetchPurchaseById(purchaseId);
     }
     return res;
   }
 
   // ── FETCH PAYMENT HISTORY ─────────────────────
-  Future<InvoicePaymentSummaryModel?> fetchPayments(int invoiceId) async {
+  Future<PurchasePaymentSummaryModel?> fetchPayments(int purchaseId) async {
     try {
-      return await _api.fetchPayments(invoiceId);
+      return await _api.fetchPayments(purchaseId);
     } catch (e) {
       print('fetchPayments error: $e');
       return null;
@@ -316,7 +317,7 @@ class InvoiceProvider extends ChangeNotifier {
 
   // ── CLEAR STATE ───────────────────────────────
   void clearSelected() {
-    selectedInvoice = null;
+    selectedPurchase = null;
     notifyListeners();
   }
 }

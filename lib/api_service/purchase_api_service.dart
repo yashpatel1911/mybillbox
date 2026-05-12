@@ -1,11 +1,11 @@
+import 'package:mybillbox/model/purchase_details/purchase_dashboard_stats_model.dart';
 import '../DBHelper/environment.dart';
 import '../DBHelper/session_manager.dart';
 import '../DBHelper/wp-api.dart';
-import '../model/invoice_details/dashboard_stats_model.dart';
-import '../model/invoice_details/invoice_model.dart';
-import '../model/invoice_details/invoice_payment_model.dart';
+import '../model/purchase_details/purchase_model.dart';
+import '../model/purchase_details/purchase_payment_model.dart';
 
-class InvoiceApiService {
+class PurchaseApiService {
   final SessionManager _setting = SessionManager();
 
   String get _token => _setting.token;
@@ -24,33 +24,35 @@ class InvoiceApiService {
   // ──────────────────────────────────────────────────
   // DASHBOARD STATS
   // ──────────────────────────────────────────────────
-  Future<DashboardStatsWrapper> fetchDashboardStats({
+  Future<PurchaseDashboardStatsWrapper> fetchPurchaseDashboardStats({
     String? paymentStatus,
     String? dateFrom,
     String? dateTo,
     String? search,
   }) async {
-    final body = await Api.get(
-      Environment().dashboardStats,
-      query: _filterParams({
-        'payment_status': paymentStatus,
-        'date_from': dateFrom,
-        'date_to': dateTo,
-        'search': search,
-      }),
-      token: _token,
-    ) as Map<String, dynamic>;
+    final body =
+        await Api.get(
+              Environment().dashboardStatsPurchase,
+              query: _filterParams({
+                'payment_status': paymentStatus,
+                'date_from': dateFrom,
+                'date_to': dateTo,
+                'search': search,
+              }),
+              token: _token,
+            )
+            as Map<String, dynamic>;
 
     if (body['status'] == true) {
-      return DashboardStatsWrapper.fromJson(body['data']);
+      return PurchaseDashboardStatsWrapper.fromJson(body['data']);
     }
     throw Exception(body['message'] ?? 'Failed to fetch dashboard stats');
   }
 
   // ──────────────────────────────────────────────────
-  // FETCH INVOICE LIST (paginated)
+  // FETCH PURCHASE LIST (paginated)
   // ──────────────────────────────────────────────────
-  Future<Map<String, dynamic>> fetchInvoicePage({
+  Future<Map<String, dynamic>> fetchPurchasePage({
     required int page,
     String? paymentStatus,
     String? dateFrom,
@@ -58,48 +60,52 @@ class InvoiceApiService {
     String? search,
     int pageSize = 10,
   }) async {
-    final body = await Api.get(
-      Environment().getInvoices,
-      query: _filterParams({
-        'page': '$page',
-        'page_size': '$pageSize',
-        'payment_status': paymentStatus,
-        'date_from': dateFrom,
-        'date_to': dateTo,
-        'search': search,
-      }),
-      token: _token,
-    ) as Map<String, dynamic>;
+    final body =
+        await Api.get(
+              Environment().getPurchase,
+              query: _filterParams({
+                'page': '$page',
+                'page_size': '$pageSize',
+                'payment_status': paymentStatus,
+                'date_from': dateFrom,
+                'date_to': dateTo,
+                'search': search,
+              }),
+              token: _token,
+            )
+            as Map<String, dynamic>;
 
     if (body['status'] == true) {
       return body['data'] as Map<String, dynamic>;
     }
-    throw Exception(body['message'] ?? 'Failed to fetch invoices');
+    throw Exception(body['message'] ?? 'Failed to fetch purchases');
   }
 
   // ──────────────────────────────────────────────────
-  // FETCH SINGLE INVOICE
+  // FETCH SINGLE Purchase
   // ──────────────────────────────────────────────────
-  Future<InvoiceModel> fetchInvoiceById(int invoiceId) async {
-    final body = await Api.get(
-      '${Environment().getInvoiceById}$invoiceId/',
-      token: _token,
-    ) as Map<String, dynamic>;
+  Future<PurchaseModel> fetchPurchaseById(int purchaseId) async {
+    final body =
+        await Api.get(
+              '${Environment().getPurchaseById}$purchaseId/',
+              token: _token,
+            )
+            as Map<String, dynamic>;
 
     if (body['status'] == true) {
-      return InvoiceModel.fromJson(body['data']);
+      return PurchaseModel.fromJson(body['data']);
     }
-    throw Exception(body['message'] ?? 'Invoice not found');
+    throw Exception(body['message'] ?? 'Purchase not found');
   }
 
   // ──────────────────────────────────────────────────
-  // CREATE INVOICE
+  // CREATE Purchase
   // ──────────────────────────────────────────────────
   // payments = [{'method': 'cash', 'amount': 300}, {'method': 'online', 'amount': 200}]
-  Future<Map<String, dynamic>> createInvoice({
+  Future<Map<String, dynamic>> createPurchase({
     required String customerName,
     required String customerMobile,
-    required String invoiceDate,
+    required String purchaseDate,
     required List<Map<String, dynamic>> items,
     String? notes,
     String? discountType,
@@ -111,7 +117,7 @@ class InvoiceApiService {
     final body = <String, dynamic>{
       'customer_name': customerName,
       'customer_mobile': customerMobile,
-      'invoice_date': invoiceDate,
+      'purchase_date': purchaseDate,
       'items': items,
       'discount_value': discountValue,
       'payment_status': paymentStatus,
@@ -121,22 +127,19 @@ class InvoiceApiService {
       if (paymentDate != null) 'payment_date': paymentDate,
     };
 
-    return await Api.post(
-      Environment().createInvoice,
-      body,
-      token: _token,
-    ) as Map<String, dynamic>;
+    return await Api.post(Environment().createPurchase, body, token: _token)
+        as Map<String, dynamic>;
   }
 
   // ──────────────────────────────────────────────────
-  // UPDATE INVOICE
+  // UPDATE Purchase
   // ──────────────────────────────────────────────────
-  Future<Map<String, dynamic>> updateInvoice({
-    required int invoiceId,
+  Future<Map<String, dynamic>> updatePurchase({
+    required int purchaseId,
     String? customerName,
     String? customerMobile,
     String? notes,
-    String? invoiceDate,
+    String? purchaseDate,
     List<Map<String, dynamic>>? items,
     String? discountType,
     double? discountValue,
@@ -147,7 +150,7 @@ class InvoiceApiService {
       if (customerName != null) 'customer_name': customerName,
       if (customerMobile != null) 'customer_mobile': customerMobile,
       if (notes != null) 'notes': notes,
-      if (invoiceDate != null) 'invoice_date': invoiceDate,
+      if (purchaseDate != null) 'purchase_date': purchaseDate,
       if (items != null) 'items': items,
       if (discountType != null) 'discount_type': discountType,
       if (discountValue != null) 'discount_value': discountValue,
@@ -156,27 +159,29 @@ class InvoiceApiService {
     };
 
     return await Api.patch(
-      '${Environment().updateInvoice}$invoiceId/',
-      body,
-      token: _token,
-    ) as Map<String, dynamic>;
+          '${Environment().updatePurchase}$purchaseId/',
+          body,
+          token: _token,
+        )
+        as Map<String, dynamic>;
   }
 
   // ──────────────────────────────────────────────────
-  // CANCEL INVOICE
+  // CANCEL Purchase
   // ──────────────────────────────────────────────────
-  Future<Map<String, dynamic>> cancelInvoice(int invoiceId) async {
+  Future<Map<String, dynamic>> cancelPurchase(int purchaseId) async {
     return await Api.delete(
-      '${Environment().cancelInvoice}$invoiceId/',
-      token: _token,
-    ) as Map<String, dynamic>;
+          '${Environment().cancelPurchase}$purchaseId/',
+          token: _token,
+        )
+        as Map<String, dynamic>;
   }
 
   // ──────────────────────────────────────────────────
   // ADD PAYMENT
   // ──────────────────────────────────────────────────
   Future<Map<String, dynamic>> addPayment({
-    required int invoiceId,
+    required int purchaseId,
     required List<Map<String, dynamic>> payments,
     String? paymentDate,
     String? note,
@@ -188,23 +193,26 @@ class InvoiceApiService {
     };
 
     return await Api.post(
-      '${Environment().addInvoicePayment}$invoiceId/',
-      body,
-      token: _token,
-    ) as Map<String, dynamic>;
+          '${Environment().addPurchasePayment}$purchaseId/',
+          body,
+          token: _token,
+        )
+        as Map<String, dynamic>;
   }
 
   // ──────────────────────────────────────────────────
   // FETCH PAYMENT HISTORY
   // ──────────────────────────────────────────────────
-  Future<InvoicePaymentSummaryModel> fetchPayments(int invoiceId) async {
-    final body = await Api.get(
-      '${Environment().fetchInvoicePayments}$invoiceId/',
-      token: _token,
-    ) as Map<String, dynamic>;
+  Future<PurchasePaymentSummaryModel> fetchPayments(int purchaseId) async {
+    final body =
+        await Api.get(
+              '${Environment().fetchPurchasePayments}$purchaseId/',
+              token: _token,
+            )
+            as Map<String, dynamic>;
 
     if (body['status'] == true) {
-      return InvoicePaymentSummaryModel.fromJson(body['data']);
+      return PurchasePaymentSummaryModel.fromJson(body['data']);
     }
     throw Exception(body['message'] ?? 'Failed to fetch payments');
   }

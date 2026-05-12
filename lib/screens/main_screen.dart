@@ -5,6 +5,7 @@ import 'package:mybillbox/screens/store/store_management_screen.dart';
 import 'package:mybillbox/screens/users/profile_screen.dart';
 import 'package:provider/provider.dart';
 import '../DBHelper/app_colors.dart';
+import '../DBHelper/session_manager.dart'; // ⚠️ adjust import to your SessionManager path
 import '../provider/category_provider.dart';
 import '../provider/product_provider.dart';
 import 'dashboard_screen.dart';
@@ -20,7 +21,8 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _idx = 0;
 
-  static const _items = [
+  // ── All possible nav items ──
+  static const _allItems = [
     _NavItem(Icons.home_outlined, Icons.home_rounded, 'Home'),
     _NavItem(Icons.storefront_rounded, Icons.receipt_rounded, 'Store'),
     _NavItem(Icons.people_outline, Icons.people_rounded, 'Customers'),
@@ -28,13 +30,23 @@ class _MainScreenState extends State<MainScreen> {
     _NavItem(Icons.person_outline, Icons.person_rounded, 'Profile'),
   ];
 
-  static const _screens = [
+  // ── All possible screens (same order as _allItems) ──
+  static const _allScreens = [
     DashboardScreen(),
     StoreManagementScreen(),
     EmployeesScreen(),
     ReportsScreen(),
     ProfileScreen(),
   ];
+
+  // ── Role-based filtered lists ──
+  bool get _isAdmin => SessionManager().role == 'ADMIN';
+
+  List<_NavItem> get _items =>
+      _isAdmin ? _allItems : [_allItems[0], _allItems[4]]; // Home + Profile
+
+  List<Widget> get _screens =>
+      _isAdmin ? _allScreens : [_allScreens[0], _allScreens[4]];
 
   void _tap(int i) {
     HapticFeedback.selectionClick();
@@ -99,7 +111,7 @@ class _BottomNav extends StatelessWidget {
           child: Row(
             children: List.generate(
               items.length,
-              (i) => Expanded(
+                  (i) => Expanded(
                 child: _NavTile(
                   item: items[i],
                   isActive: current == i,

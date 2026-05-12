@@ -20,6 +20,8 @@ class SessionManager {
   // Existing getters
   String get name => _sharedPreferences.getString('name') ?? '';
 
+  String get has_shop => _sharedPreferences.getString('has_shop') ?? '';
+
   String get mobile => _sharedPreferences.getString('mobile') ?? '';
 
   String get status => _sharedPreferences.getString('status') ?? '';

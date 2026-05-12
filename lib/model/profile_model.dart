@@ -25,15 +25,15 @@ class ProfileModel {
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
     return ProfileModel(
-      id:        json['id'] as int,
-      name:      json['name']?.toString() ?? '',
-      username:  json['username']?.toString() ?? '',
+      id: json['id'] as int,
+      name: json['name']?.toString() ?? '',
+      username: json['username']?.toString() ?? '',
       contactNo: json['contact_no']?.toString() ?? '',
-      email:     json['email']?.toString(),
-      role:      json['role']?.toString() ?? 'EMPLOYEE',
-      isActive:  json['is_active'] ?? true,
+      email: json['email']?.toString(),
+      role: json['role']?.toString() ?? 'EMPLOYEE',
+      isActive: json['is_active'] ?? true,
       createdAt: json['created_at']?.toString(),
-      shop:      json['shop'] != null
+      shop: json['shop'] != null
           ? ShopModel.fromJson(json['shop'] as Map<String, dynamic>)
           : null,
     );
@@ -47,6 +47,7 @@ class ShopModel {
   final String? shEmail;
   final String shAddress;
   final String? gstNo;
+  final String? shLogo; // ← NEW
   final bool isActive;
   final String? createdAt;
 
@@ -57,20 +58,22 @@ class ShopModel {
     this.shEmail,
     required this.shAddress,
     this.gstNo,
+    this.shLogo,
     required this.isActive,
     this.createdAt,
   });
 
   factory ShopModel.fromJson(Map<String, dynamic> json) {
     return ShopModel(
-      shId:        json['sh_id'] as int,
-      shName:      json['sh_name']?.toString() ?? '',
+      shId: json['sh_id'] as int,
+      shName: json['sh_name']?.toString() ?? '',
       shContactNo: json['sh_contact_no']?.toString() ?? '',
-      shEmail:     json['sh_email']?.toString(),
-      shAddress:   json['sh_address']?.toString() ?? '',
-      gstNo:       json['gst_no']?.toString(),
-      isActive:    json['is_active'] ?? true,
-      createdAt:   json['created_at']?.toString(),
+      shEmail: json['sh_email']?.toString(),
+      shAddress: json['sh_address']?.toString() ?? '',
+      gstNo: json['gst_no']?.toString(),
+      shLogo: json['sh_logo']?.toString(), // ← NEW
+      isActive: json['is_active'] ?? true,
+      createdAt: json['created_at']?.toString(),
     );
   }
 }

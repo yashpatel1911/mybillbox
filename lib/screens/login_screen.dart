@@ -7,6 +7,7 @@ import '../DBHelper/app_constant.dart';
 import '../DBHelper/environment.dart';
 import '../DBHelper/session_manager.dart';
 import '../DBHelper/wp-api.dart';
+import 'create_shop_screen.dart';
 import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -75,18 +76,34 @@ class _LoginScreenState extends State<LoginScreen>
       if (result['status'] == true) {
         final data = result['data'] as Map<String, dynamic>;
 
+        final role = data['role'].toString();
+        final hasShop = data['has_shop'] == true;
+
         await SessionManager().setPreference(
           'token',
           data['access_token'].toString(),
         );
         await SessionManager().setPreference('name', data['name'].toString());
+        await SessionManager().setPreference('role', role);
         await SessionManager().setPreference('status', 'Login');
+        await SessionManager().setPreference('has_shop', hasShop ? '1' : '0');
 
-        Get.offAll(
-          () => MainScreen(),
-          transition: Transition.fadeIn,
-          duration: const Duration(milliseconds: 600),
-        );
+        // ── Routing logic ──
+        // ADMIN without a shop → force shop creation
+        // Everyone else → main screen
+        if (role == 'ADMIN' && !hasShop) {
+          Get.offAll(
+            () => const CreateShopScreen(),
+            transition: Transition.fadeIn,
+            duration: const Duration(milliseconds: 600),
+          );
+        } else {
+          Get.offAll(
+            () => const MainScreen(),
+            transition: Transition.fadeIn,
+            duration: const Duration(milliseconds: 600),
+          );
+        }
       } else {
         AppConstant.errorMessage(result['message'] ?? 'Login failed', context);
       }

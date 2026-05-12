@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:mybillbox/model/purchase_details/purchase_cart_item_model.dart';
+import 'package:mybillbox/screens/purchase_ui/purchase_details/purchase_widgets.dart';
 import '../../../../DBHelper/app_colors.dart';
 import '../../../../model/invoice_details/cart_item_model.dart';
 import '../../../../model/product_model.dart';
-import 'invoice_widgets.dart';
 
 // ─── Edit product row ────────────────────────────────
 class EditProductRow extends StatelessWidget {
@@ -64,7 +65,9 @@ class EditProductRow extends StatelessWidget {
                     Text(
                       '₹${product.fixPrice?.toStringAsFixed(0) ?? '0'}',
                       style: const TextStyle(
-                          fontSize: 11, color: AppColors.textLight),
+                        fontSize: 11,
+                        color: AppColors.textLight,
+                      ),
                     ),
                   ],
                 ),
@@ -72,8 +75,10 @@ class EditProductRow extends StatelessWidget {
               if (addedCount > 0)
                 Container(
                   margin: const EdgeInsets.only(right: 8),
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.green.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -140,12 +145,9 @@ class EditProductRow extends StatelessWidget {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
                             height: 28,
-                            padding:
-                            const EdgeInsets.symmetric(horizontal: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
                             decoration: BoxDecoration(
-                              color: sel
-                                  ? AppColors.primary
-                                  : AppColors.cardBg,
+                              color: sel ? AppColors.primary : AppColors.cardBg,
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
                                 color: sel
@@ -194,7 +196,7 @@ class EditProductRow extends StatelessWidget {
 
 // ─── Edit cart row ───────────────────────────────────
 class EditCartRow extends StatelessWidget {
-  final CartItem item;
+  final PurchaseCartItem item;
   final VoidCallback onIncrement, onDecrement, onRemove;
   final ValueChanged<String> onPriceChanged;
 
@@ -241,7 +243,9 @@ class EditCartRow extends StatelessWidget {
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(5),
@@ -264,8 +268,11 @@ class EditCartRow extends StatelessWidget {
               ),
               GestureDetector(
                 onTap: onRemove,
-                child: const Icon(Icons.close_rounded,
-                    size: 18, color: AppColors.red),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: AppColors.red,
+                ),
               ),
             ],
           ),
@@ -281,7 +288,9 @@ class EditCartRow extends StatelessWidget {
                     const Text(
                       'Price (₹)',
                       style: TextStyle(
-                          fontSize: 10, color: AppColors.textLight),
+                        fontSize: 10,
+                        color: AppColors.textLight,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     SizedBox(
@@ -297,23 +306,22 @@ class EditCartRow extends StatelessWidget {
                         ),
                         decoration: InputDecoration(
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 7),
+                            horizontal: 10,
+                            vertical: 7,
+                          ),
                           filled: true,
                           fillColor: AppColors.cardBg,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(7),
-                            borderSide:
-                            BorderSide(color: AppColors.border),
+                            borderSide: BorderSide(color: AppColors.border),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(7),
-                            borderSide:
-                            BorderSide(color: AppColors.border),
+                            borderSide: BorderSide(color: AppColors.border),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(7),
-                            borderSide:
-                            BorderSide(color: AppColors.primary),
+                            borderSide: BorderSide(color: AppColors.primary),
                           ),
                         ),
                       ),
@@ -328,16 +336,14 @@ class EditCartRow extends StatelessWidget {
                 children: [
                   const Text(
                     'Qty',
-                    style: TextStyle(
-                        fontSize: 10, color: AppColors.textLight),
+                    style: TextStyle(fontSize: 10, color: AppColors.textLight),
                   ),
                   const SizedBox(height: 3),
                   Row(
                     children: [
                       QtyBtn(icon: Icons.remove, onTap: onDecrement),
                       Padding(
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Text(
                           '${item.qty}',
                           style: const TextStyle(
@@ -359,8 +365,7 @@ class EditCartRow extends StatelessWidget {
                 children: [
                   const Text(
                     'Total',
-                    style: TextStyle(
-                        fontSize: 10, color: AppColors.textLight),
+                    style: TextStyle(fontSize: 10, color: AppColors.textLight),
                   ),
                   const SizedBox(height: 3),
                   Text(

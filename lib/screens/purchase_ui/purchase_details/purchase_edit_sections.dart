@@ -1,39 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mybillbox/screens/store/invoice/invoice_details/product_cart_widgets.dart';
+import 'package:mybillbox/screens/purchase_ui/purchase_details/purchase_product_cart_widgets.dart'
+    show EditProductRow, EditCartRow;
+import 'package:mybillbox/screens/purchase_ui/purchase_details/purchase_widgets.dart';
 import 'package:provider/provider.dart';
 import '../../../../DBHelper/app_colors.dart';
-import '../../../../model/invoice_details/cart_item_model.dart';
-import '../../../../model/invoice_details/invoice_model.dart';
+import '../../../../model/purchase_details/purchase_cart_item_model.dart';
+import '../../../../model/purchase_details/purchase_model.dart';
 import '../../../../model/product_model.dart';
 import '../../../../provider/product_provider.dart';
-import 'invoice_widgets.dart';
 
-// ─── Customer / date / notes edit card ───────────────
-class EditCustomerCard extends StatelessWidget {
+// ─── Supplier / date / notes edit card ───────────────
+class EditSupplierCard extends StatelessWidget {
   final TextEditingController nameCtrl;
   final TextEditingController mobileCtrl;
   final TextEditingController notesCtrl;
-  final DateTime invoiceDate;
+  final DateTime purchaseDate;
   final ValueChanged<DateTime> onDateChanged;
 
-  const EditCustomerCard({
+  const EditSupplierCard({
     super.key,
     required this.nameCtrl,
     required this.mobileCtrl,
     required this.notesCtrl,
-    required this.invoiceDate,
+    required this.purchaseDate,
     required this.onDateChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     return DetailCard(
-      title: 'Customer Details',
+      title: 'Supplier Details',
       child: Column(
         children: [
           EditField(
-            label: 'Customer Name *',
+            label: 'Supplier Name *',
             controller: nameCtrl,
             hint: 'e.g. Rajesh Electronics',
             capitalization: TextCapitalization.words,
@@ -52,19 +53,17 @@ class EditCustomerCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Invoice Date *',
-                style: TextStyle(
-                    fontSize: 11, color: AppColors.textMedium),
+                'Purchase Date *',
+                style: TextStyle(fontSize: 11, color: AppColors.textMedium),
               ),
               const SizedBox(height: 4),
               GestureDetector(
                 onTap: () async {
                   final d = await showDatePicker(
                     context: context,
-                    initialDate: invoiceDate,
+                    initialDate: purchaseDate,
                     firstDate: DateTime(2020),
-                    lastDate:
-                    DateTime.now().add(const Duration(days: 30)),
+                    lastDate: DateTime.now().add(const Duration(days: 30)),
                   );
                   if (d != null) onDateChanged(d);
                 },
@@ -77,18 +76,20 @@ class EditCustomerCard extends StatelessWidget {
                     border: Border.all(color: AppColors.border),
                   ),
                   child: Row(
-                    mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        DateFormat('dd MMM yyyy').format(invoiceDate),
+                        DateFormat('dd MMM yyyy').format(purchaseDate),
                         style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.textDark,
                         ),
                       ),
-                      const Icon(Icons.calendar_today_outlined,
-                          size: 16, color: AppColors.textLight),
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 16,
+                        color: AppColors.textLight,
+                      ),
                     ],
                   ),
                 ),
@@ -99,7 +100,7 @@ class EditCustomerCard extends StatelessWidget {
           EditField(
             label: 'Notes (optional)',
             controller: notesCtrl,
-            hint: 'Any note for this invoice',
+            hint: 'Any note for this purchase',
             maxLines: 2,
           ),
         ],
@@ -110,7 +111,7 @@ class EditCustomerCard extends StatelessWidget {
 
 // ─── Product search + cart card ───────────────────────
 class EditProductsCard extends StatelessWidget {
-  final Map<String, CartItem> cart;
+  final Map<String, PurchaseCartItem> cart;
   final Map<int, String?> pendingSize;
   final TextEditingController searchCtrl;
   final String searchQuery;
@@ -159,20 +160,27 @@ class EditProductsCard extends StatelessWidget {
                 decoration: InputDecoration(
                   hintText: 'Search products to add...',
                   hintStyle: const TextStyle(
-                      color: AppColors.textLight, fontSize: 13),
-                  prefixIcon: const Icon(Icons.search_rounded,
-                      size: 18, color: AppColors.textLight),
+                    color: AppColors.textLight,
+                    fontSize: 13,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    size: 18,
+                    color: AppColors.textLight,
+                  ),
                   suffixIcon: searchQuery.isNotEmpty
                       ? GestureDetector(
-                    onTap: onSearchClear,
-                    child: const Icon(Icons.close_rounded,
-                        size: 16, color: AppColors.textLight),
-                  )
+                          onTap: onSearchClear,
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: AppColors.textLight,
+                          ),
+                        )
                       : null,
                   filled: true,
                   fillColor: AppColors.pageBg,
-                  contentPadding:
-                  const EdgeInsets.symmetric(vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(color: AppColors.border),
@@ -184,13 +192,16 @@ class EditProductsCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
+
               // Product list
               if (provider.loadProduct)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
                   child: Center(
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.primary),
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    ),
                   ),
                 )
               else if (provider.productList.isEmpty)
@@ -201,20 +212,21 @@ class EditProductsCard extends StatelessWidget {
                         ? 'No products match "$searchQuery"'
                         : 'No products found',
                     style: const TextStyle(
-                        color: AppColors.textLight, fontSize: 13),
+                      color: AppColors.textLight,
+                      fontSize: 13,
+                    ),
                   ),
                 )
               else
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: provider.productList.length +
-                      (provider.hasMore ? 1 : 0),
+                  itemCount:
+                      provider.productList.length + (provider.hasMore ? 1 : 0),
                   itemBuilder: (_, i) {
                     if (i == provider.productList.length) {
                       WidgetsBinding.instance.addPostFrameCallback(
-                            (_) =>
-                            context.read<ProductProvider>().loadMore(),
+                        (_) => context.read<ProductProvider>().loadMore(),
                       );
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 12),
@@ -223,8 +235,9 @@ class EditProductsCard extends StatelessWidget {
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.primary),
+                              strokeWidth: 2,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
                       );
@@ -242,6 +255,7 @@ class EditProductsCard extends StatelessWidget {
                     );
                   },
                 ),
+
               // Cart items
               if (cart.isNotEmpty) ...[
                 const Divider(height: 20, color: AppColors.border),
@@ -255,23 +269,25 @@ class EditProductsCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 ...cart.entries.map(
-                      (entry) => EditCartRow(
+                  (entry) => EditCartRow(
                     item: entry.value,
                     onIncrement: () => onIncrement(entry.key),
                     onDecrement: () => onDecrement(entry.key),
                     onRemove: () => onRemoveFromCart(entry.key),
-                    onPriceChanged: (v) =>
-                        onPriceChanged(entry.key, v),
+                    onPriceChanged: (v) => onPriceChanged(entry.key, v),
                   ),
                 ),
                 const Divider(height: 16, color: AppColors.border),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Subtotal',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textMedium)),
+                    const Text(
+                      'Subtotal',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textMedium,
+                      ),
+                    ),
                     Text(
                       '₹${fmt(subTotal)}',
                       style: const TextStyle(
@@ -341,11 +357,15 @@ class EditDiscountCard extends StatelessWidget {
                     ? 'Amount in ₹'
                     : 'Percent 0–100',
                 hintStyle: const TextStyle(
-                    color: AppColors.textLight, fontSize: 13),
+                  color: AppColors.textLight,
+                  fontSize: 13,
+                ),
                 filled: true,
                 fillColor: AppColors.pageBg,
                 contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 12),
+                  horizontal: 12,
+                  vertical: 12,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(color: AppColors.border),
@@ -368,8 +388,8 @@ class EditDiscountCard extends StatelessWidget {
 }
 
 // ─── Payment status + new payment entry card ─────────
-class EditPaymentCard extends StatelessWidget {
-  final InvoiceModel invoice;
+class EditPurchasePaymentCard extends StatelessWidget {
+  final PurchaseModel purchase;
   final String paymentStatus;
   final bool useCash;
   final bool useOnline;
@@ -383,9 +403,9 @@ class EditPaymentCard extends StatelessWidget {
   final ValueChanged<String> onCashChanged;
   final ValueChanged<String> onOnlineChanged;
 
-  const EditPaymentCard({
+  const EditPurchasePaymentCard({
     super.key,
-    required this.invoice,
+    required this.purchase,
     required this.paymentStatus,
     required this.useCash,
     required this.useOnline,
@@ -400,8 +420,6 @@ class EditPaymentCard extends StatelessWidget {
     required this.onOnlineChanged,
   });
 
-  double get _cashAmount => double.tryParse(cashCtrl.text) ?? 0;
-
   @override
   Widget build(BuildContext context) {
     return DetailCard(
@@ -410,25 +428,23 @@ class EditPaymentCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Already paid banner
-          if (invoice.amountPaid > 0) ...[
+          if (purchase.amountPaid > 0) ...[
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: AppColors.green.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(8),
-                border:
-                Border.all(color: AppColors.green.withOpacity(0.2)),
+                border: Border.all(color: AppColors.green.withOpacity(0.2)),
               ),
               child: Row(
-                mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Already paid',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textMedium)),
+                  const Text(
+                    'Already paid',
+                    style: TextStyle(fontSize: 12, color: AppColors.textMedium),
+                  ),
                   Text(
-                    '₹${fmt(invoice.amountPaid)}',
+                    '₹${fmt(purchase.amountPaid)}',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -440,6 +456,7 @@ class EditPaymentCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
+
           // Status chips
           Row(
             children: [
@@ -468,6 +485,7 @@ class EditPaymentCard extends StatelessWidget {
               ),
             ],
           ),
+
           // New payment entry
           if (paymentStatus != 'pending') ...[
             const SizedBox(height: 14),
@@ -484,8 +502,7 @@ class EditPaymentCard extends StatelessWidget {
             const SizedBox(height: 2),
             const Text(
               'Enter cash/online for additional payment only',
-              style:
-              TextStyle(fontSize: 10, color: AppColors.textLight),
+              style: TextStyle(fontSize: 10, color: AppColors.textLight),
             ),
             const SizedBox(height: 10),
             SplitRow(

@@ -1,39 +1,39 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mybillbox/screens/purchase_ui/purchase_details/purchase_edit_sections.dart';
+import 'package:mybillbox/screens/purchase_ui/purchase_details/purchase_view_sections.dart';
 import 'package:provider/provider.dart';
 import '../../../../DBHelper/app_colors.dart';
 import '../../../../DBHelper/app_constant.dart';
-import '../../../../model/invoice_details/cart_item_model.dart';
-import '../../../../model/invoice_details/invoice_model.dart';
-import '../../../../provider/invoice_provider.dart';
+import '../../../../model/purchase_details/purchase_model.dart';
+import '../../../../provider/purchase_provider.dart';
 import '../../../../provider/product_provider.dart';
-import 'invoice_edit_sections.dart';
-import 'invoice_view_sections.dart';
+import '../../../model/purchase_details/purchase_cart_item_model.dart';
 
-class InvoiceDetailPage extends StatefulWidget {
-  final int invoiceId;
+class PurchaseDetailPage extends StatefulWidget {
+  final int purchaseId;
 
-  const InvoiceDetailPage({super.key, required this.invoiceId});
+  const PurchaseDetailPage({super.key, required this.purchaseId});
 
   @override
-  State<InvoiceDetailPage> createState() => _InvoiceDetailPageState();
+  State<PurchaseDetailPage> createState() => _PurchaseDetailPageState();
 }
 
-class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
-  InvoiceModel? _invoice;
+class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
+  PurchaseModel? _purchase;
   bool _loading = true;
   bool _editMode = false;
   bool _saving = false;
 
-  // ── Customer edit controllers
+  // ── Supplier edit controllers
   late TextEditingController _nameCtrl;
   late TextEditingController _mobileCtrl;
   late TextEditingController _notesCtrl;
-  late DateTime _invoiceDate;
+  late DateTime _purchaseDate;
 
   // ── Items edit state
-  final Map<String, CartItem> _cart = {};
+  final Map<String, PurchaseCartItem> _cart = {};
   int _cartCounter = 0;
   final Map<int, String?> _pendingSize = {};
   final TextEditingController _searchCtrl = TextEditingController();
@@ -62,7 +62,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
     _mobileCtrl = TextEditingController();
     _notesCtrl = TextEditingController();
     _discValCtrl = TextEditingController(text: '0');
-    _invoiceDate = DateTime.now();
+    _purchaseDate = DateTime.now();
     _load();
   }
 
@@ -86,17 +86,18 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final inv = await context.read<InvoiceProvider>().fetchInvoiceById(
-        widget.invoiceId,
+      final purchase = await context.read<PurchaseProvider>().fetchPurchaseById(
+        widget.purchaseId,
       );
-      if (mounted && inv != null) {
+      if (mounted && purchase != null) {
         setState(() {
-          _invoice = inv;
+          _purchase = purchase;
           _loading = false;
-          _nameCtrl.text = inv.customerName;
-          _mobileCtrl.text = inv.customerMobile;
-          _notesCtrl.text = inv.notes;
-          _invoiceDate = DateTime.tryParse(inv.invoiceDate) ?? DateTime.now();
+          _nameCtrl.text = purchase.customerName;
+          _mobileCtrl.text = purchase.customerMobile;
+          _notesCtrl.text = purchase.notes;
+          _purchaseDate =
+              DateTime.tryParse(purchase.purchaseDate) ?? DateTime.now();
         });
       }
     } catch (_) {
@@ -109,19 +110,19 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
   // ────────────────────────────────────────────────────
 
   void _enterEditMode() {
-    final inv = _invoice!;
-    _nameCtrl.text = inv.customerName;
-    _mobileCtrl.text = inv.customerMobile;
-    _notesCtrl.text = inv.notes;
-    _invoiceDate = DateTime.tryParse(inv.invoiceDate) ?? DateTime.now();
+    final purchase = _purchase!;
+    _nameCtrl.text = purchase.customerName;
+    _mobileCtrl.text = purchase.customerMobile;
+    _notesCtrl.text = purchase.notes;
+    _purchaseDate = DateTime.tryParse(purchase.purchaseDate) ?? DateTime.now();
 
     _cart.clear();
     _cartCounter = 0;
     _pendingSize.clear();
-    for (final item in inv.items) {
+    for (final item in purchase.items) {
       _cartCounter++;
       final key = '${item.productId}_${item.size ?? "none"}_$_cartCounter';
-      _cart[key] = CartItem(
+      _cart[key] = PurchaseCartItem(
         productId: item.productId,
         productName: item.productName,
         qty: item.quantity,
@@ -131,11 +132,11 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
       );
     }
 
-    _discountType = inv.discountType;
-    _discValCtrl.text = inv.discountValue > 0
-        ? inv.discountValue.toStringAsFixed(0)
+    _discountType = purchase.discountType;
+    _discValCtrl.text = purchase.discountValue > 0
+        ? purchase.discountValue.toStringAsFixed(0)
         : '0';
-    _paymentStatus = inv.paymentStatus;
+    _paymentStatus = purchase.paymentStatus;
     _useCash = false;
     _useOnline = false;
     _cashCtrl.text = '0';
@@ -199,7 +200,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
     setState(() {
       _cartCounter++;
       final key = '${prodId}_${size}_$_cartCounter';
-      _cart[key] = CartItem(
+      _cart[key] = PurchaseCartItem(
         productId: prodId,
         productName: product.prodName as String,
         qty: 1,
@@ -246,7 +247,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
       } else if (status == 'paid') {
         _useCash = true;
         _useOnline = false;
-        final remaining = (_editTotal - (_invoice?.amountPaid ?? 0)).clamp(
+        final remaining = (_editTotal - (_purchase?.amountPaid ?? 0)).clamp(
           0.0,
           double.infinity,
         );
@@ -261,7 +262,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
     if (!val) {
       _cashCtrl.text = '0';
     } else if (_useOnline) {
-      final due = (_editTotal - (_invoice?.amountPaid ?? 0)).clamp(
+      final due = (_editTotal - (_purchase?.amountPaid ?? 0)).clamp(
         0.0,
         double.infinity,
       );
@@ -275,7 +276,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
     if (!val) {
       _onlineCtrl.text = '0';
     } else if (_useCash) {
-      final due = (_editTotal - (_invoice?.amountPaid ?? 0)).clamp(
+      final due = (_editTotal - (_purchase?.amountPaid ?? 0)).clamp(
         0.0,
         double.infinity,
       );
@@ -287,7 +288,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
   void _onCashChanged(String v) {
     if (_useOnline) {
       setState(() {
-        final due = (_editTotal - (_invoice?.amountPaid ?? 0)).clamp(
+        final due = (_editTotal - (_purchase?.amountPaid ?? 0)).clamp(
           0.0,
           double.infinity,
         );
@@ -303,7 +304,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
   void _onOnlineChanged(String v) {
     if (_useCash) {
       setState(() {
-        final due = (_editTotal - (_invoice?.amountPaid ?? 0)).clamp(
+        final due = (_editTotal - (_purchase?.amountPaid ?? 0)).clamp(
           0.0,
           double.infinity,
         );
@@ -322,7 +323,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
 
   Future<void> _saveEdit() async {
     if (_nameCtrl.text.trim().isEmpty) {
-      AppConstant.warningMessage('Customer name is required', context);
+      AppConstant.warningMessage('Supplier name is required', context);
       return;
     }
     if (_mobileCtrl.text.trim().length < 10) {
@@ -334,7 +335,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
       return;
     }
     if (_paymentStatus != 'pending' && (_useCash || _useOnline)) {
-      final amountDue = (_editTotal - (_invoice!.amountPaid)).clamp(
+      final amountDue = (_editTotal - (_purchase!.amountPaid)).clamp(
         0.0,
         double.infinity,
       );
@@ -361,12 +362,12 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
           )
           .toList();
 
-      final res = await context.read<InvoiceProvider>().updateInvoice(
-        invoiceId: widget.invoiceId,
+      final res = await context.read<PurchaseProvider>().updatePurchase(
+        purchaseId: widget.purchaseId,
         customerName: _nameCtrl.text.trim(),
         customerMobile: _mobileCtrl.text.trim(),
         notes: _notesCtrl.text.trim(),
-        invoiceDate: DateFormat('yyyy-MM-dd').format(_invoiceDate),
+        purchaseDate: DateFormat('yyyy-MM-dd').format(_purchaseDate),
         items: items,
         discountType: _discountType,
         discountValue: double.tryParse(_discValCtrl.text) ?? 0,
@@ -376,9 +377,9 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
 
       if (!mounted) return;
       if (res['status'] == true) {
-        AppConstant.successMessage('Invoice updated!', context);
+        AppConstant.successMessage('Purchase updated!', context);
         setState(() {
-          _invoice = context.read<InvoiceProvider>().selectedInvoice;
+          _purchase = context.read<PurchaseProvider>().selectedPurchase;
           _editMode = false;
           _cart.clear();
         });
@@ -447,7 +448,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
           onPressed: () => _editMode ? _cancelEdit() : Navigator.pop(context),
         ),
         title: Text(
-          _editMode ? 'Edit Invoice' : 'Invoice Detail',
+          _editMode ? 'Edit Purchase' : 'Purchase Detail',
           style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
@@ -455,7 +456,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
           ),
         ),
         actions: [
-          if (!_loading && _invoice != null && !_invoice!.isCancelled)
+          if (!_loading && _purchase != null && !_purchase!.isCancelled)
             _editMode
                 ? TextButton(
                     onPressed: _cancelEdit,
@@ -483,7 +484,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _invoice == null
+          : _purchase == null
           ? _errorState()
           : RefreshIndicator(
               onRefresh: _load,
@@ -537,22 +538,22 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
   // ── View mode layout ─────────────────────────────────
   Widget _buildViewMode() => Column(
     children: [
-      InvoiceHeaderCard(
-        invoice: _invoice!,
+      PurchaseHeaderCard(
+        purchase: _purchase!,
         statusColor: _statusColor,
         statusLabel: _statusLabel,
       ),
       const SizedBox(height: 12),
-      InvoiceCustomerCard(invoice: _invoice!),
+      PurchaseCustomerCard(purchase: _purchase!),
       const SizedBox(height: 12),
-      InvoiceItemsCard(invoice: _invoice!, fmt: _fmt),
+      PurchaseItemsCard(purchase: _purchase!, fmt: _fmt),
       const SizedBox(height: 12),
-      InvoiceSummaryCard(invoice: _invoice!, fmt: _fmt),
+      PurchaseSummaryCard(purchase: _purchase!, fmt: _fmt),
       const SizedBox(height: 12),
-      if (_invoice!.paymentStatus != 'paid')
+      if (_purchase!.paymentStatus != 'paid')
         AddPaymentCard(
-          invoice: _invoice!,
-          invoiceId: widget.invoiceId,
+          purchase: _purchase!,
+          purchaseId: widget.purchaseId,
           fmt: _fmt,
           onPaymentSuccess: _load,
         ),
@@ -562,12 +563,12 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
   // ── Edit mode layout ─────────────────────────────────
   Widget _buildEditMode() => Column(
     children: [
-      EditCustomerCard(
+      EditSupplierCard(
         nameCtrl: _nameCtrl,
         mobileCtrl: _mobileCtrl,
         notesCtrl: _notesCtrl,
-        invoiceDate: _invoiceDate,
-        onDateChanged: (d) => setState(() => _invoiceDate = d),
+        purchaseDate: _purchaseDate,
+        onDateChanged: (d) => setState(() => _purchaseDate = d),
       ),
       const SizedBox(height: 12),
       EditProductsCard(
@@ -611,8 +612,8 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
         }),
       ),
       const SizedBox(height: 12),
-      EditPaymentCard(
-        invoice: _invoice!,
+      EditPurchasePaymentCard(
+        purchase: _purchase!,
         paymentStatus: _paymentStatus,
         useCash: _useCash,
         useOnline: _useOnline,
@@ -648,7 +649,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
         Icon(Icons.error_outline_rounded, size: 48, color: AppColors.textLight),
         const SizedBox(height: 12),
         const Text(
-          'Invoice not found',
+          'Purchase not found',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,

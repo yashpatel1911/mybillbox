@@ -6,6 +6,7 @@ import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:mybillbox/screens/main_screen.dart';
 import '../DBHelper/app_colors.dart';
 import '../DBHelper/session_manager.dart';
+import 'create_shop_screen.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -68,8 +69,6 @@ class _SplashScreenState extends State<SplashScreen>
     _runSequence();
   }
 
-
-
   void _runSequence() async {
     await Future.delayed(const Duration(milliseconds: 250));
     _logoCtrl.forward();
@@ -79,11 +78,16 @@ class _SplashScreenState extends State<SplashScreen>
     _tagCtrl.forward();
     await Future.delayed(const Duration(milliseconds: 1600));
     if (mounted) {
-      if (SessionManager().status == 'Login') {
-        Get.off(() => MainScreen());
-      } else {
-        Get.off(() => LoginScreen());
+      if (SessionManager().status != 'Login') {
+        Get.off(() => const LoginScreen());
+        return;
       }
+      if (SessionManager().role == 'ADMIN' &&
+          SessionManager().has_shop != '1') {
+        Get.off(() => const CreateShopScreen());
+        return;
+      }
+      Get.off(() => const MainScreen());
     }
   }
 

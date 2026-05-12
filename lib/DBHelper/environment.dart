@@ -38,4 +38,31 @@ class Environment {
   // Profile
   final String getProfile = 'get/profile/';
   final String changePassword = 'change-password/';
+
+  // ── Expense Category ──
+  String fetchExpenseCategory = 'expense-category/list/';
+  String createExpenseCategory = 'expense-category/create/';
+  String updateExpenseCategory = 'expense-category/update/';
+  String deleteExpenseCategory = 'expense-category/delete/';
+
+  // ── Expense ──
+  String fetchExpenses = 'expenses/get/';
+  String createExpense = 'expenses/create/';
+  String updateExpense = 'expenses/update/';
+  String deleteExpense = 'expenses/delete/';
+
+  // Purchase
+  String createPurchase = 'create-purchase/';
+  String getPurchase = 'purchase/';
+  String getPurchaseById = 'purchase/';
+  String updatePurchase = 'update-purchase/';
+  String cancelPurchase = 'cancel-purchase/';
+  String dashboardStatsPurchase = 'purchase-dashboard-stats/';
+
+  // Payments
+  String addPurchasePayment = 'payment-add-purchase/';
+  String fetchPurchasePayments = 'fetch-payment-purchase/';
+
+  String createShop = 'create-shop/';
+  String shopCategories = 'shop/categories/';
 }

@@ -86,322 +86,112 @@ class AppConstant {
       desktopSnackBarPosition: DesktopSnackBarPosition.topRight,
     ).show(context);
   }*/
+
 // Enhanced Success Message with Compact Design
-  static successMessage(String message, BuildContext context, {int time = 2}) {
-    return AnimatedSnackBar(
-      duration: Duration(seconds: time),
-      builder: (context) => Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFF00C853),
-                Color(0xFF00E676),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0xFF00C853).withOpacity(0.3),
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Animated Check Icon
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Message
-              Flexible(
-                child: Text(
-                  message,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Close Button
-              GestureDetector(
-                onTap: () =>
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar(),
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      mobileSnackBarPosition: MobileSnackBarPosition.top,
-      desktopSnackBarPosition: DesktopSnackBarPosition.topRight,
-      animationCurve: Curves.easeOutCubic,
-    ).show(context);
+  static void successMessage(String message, BuildContext context, {int time = 2}) {
+    _show(context, message, time,
+        bg: const Color(0xFF0F9D58),
+        icon: Icons.check_circle_rounded);
   }
 
-
-  // Enhanced Error Message (Compact)
-  static errorMessage(String message, BuildContext context, {int time = 3}) {
-    return AnimatedSnackBar(
-      duration: Duration(seconds: time),
-      builder: (context) => Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFFD32F2F),
-                Color(0xFFEF5350),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0xFFD32F2F).withOpacity(0.3),
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Error Icon
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.error_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Message
-              Flexible(
-                child: Text(
-                  message,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Close Button
-              GestureDetector(
-                onTap: () =>
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar(),
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      mobileSnackBarPosition: MobileSnackBarPosition.top,
-      desktopSnackBarPosition: DesktopSnackBarPosition.topRight,
-      animationCurve: Curves.easeOutCubic,
-    ).show(context);
+  static void errorMessage(String message, BuildContext context, {int time = 3}) {
+    _show(context, message, time,
+        bg: const Color(0xFFD32F2F),
+        icon: Icons.error_rounded);
   }
 
-  // Info Message (Compact)
-  static infoMessage(String message, BuildContext context, {int time = 2}) {
-    return AnimatedSnackBar(
-      duration: Duration(seconds: time),
-      builder: (context) => Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFF1976D2),
-                Color(0xFF42A5F5),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0xFF1976D2).withOpacity(0.3),
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Info Icon
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.info_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Message
-              Flexible(
-                child: Text(
-                  message,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Close Button
-              GestureDetector(
-                onTap: () =>
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar(),
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      mobileSnackBarPosition: MobileSnackBarPosition.top,
-      desktopSnackBarPosition: DesktopSnackBarPosition.topRight,
-      animationCurve: Curves.easeOutCubic,
-    ).show(context);
+  static void infoMessage(String message, BuildContext context, {int time = 2}) {
+    _show(context, message, time,
+        bg: const Color(0xFF1976D2),
+        icon: Icons.info_rounded);
   }
 
-  // Warning Message (Compact)
-  static warningMessage(String message, BuildContext context, {int time = 3}) {
-    return AnimatedSnackBar(
+  static void warningMessage(String message, BuildContext context, {int time = 3}) {
+    _show(context, message, time,
+        bg: const Color(0xFFF57C00),
+        icon: Icons.warning_rounded);
+  }
+
+  static void _show(
+      BuildContext context,
+      String message,
+      int time, {
+        required Color bg,
+        required IconData icon,
+      }) {
+    AnimatedSnackBar(
       duration: Duration(seconds: time),
-      builder: (context) => Center(
+      builder: (ctx) => Center(
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
+          constraints: const BoxConstraints(maxWidth: 420),
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFFF57C00),
-                Color(0xFFFF9800),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Color(0xFFF57C00).withOpacity(0.3),
-                blurRadius: 12,
-                offset: Offset(0, 4),
+                color: Colors.black.withOpacity(0.10),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Warning Icon
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.warning_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Message
-              Flexible(
-                child: Text(
-                  message,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: IntrinsicHeight(
+              child: Row(
+                children: [
+                  // Accent stripe
+                  Container(width: 4, color: bg),
+                  // Icon block
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 0, 12),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: bg.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(icon, color: bg, size: 18),
+                    ),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Close Button
-              GestureDetector(
-                onTap: () =>
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar(),
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 18,
+                  // Message
+                  Flexible(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 14,
+                      ),
+                      child: Text(
+                        message,
+                        style: const TextStyle(
+                          color: Color(0xFF1A1A1A),
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
-                ),
+                  // Close
+                  GestureDetector(
+                    onTap: () => ScaffoldMessenger.of(ctx).hideCurrentSnackBar(),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(8, 14, 14, 14),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Color(0xFF9CA3AF),
+                        size: 17,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

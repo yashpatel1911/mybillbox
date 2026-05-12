@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../../DBHelper/app_colors.dart';
 import '../../../../DBHelper/app_constant.dart';
-import '../../../../model/invoice_model.dart';
+import '../../../../model/invoice_details/invoice_model.dart';
 import '../../../../model/product_model.dart';
 import '../../../../provider/invoice_provider.dart';
 import '../../../../provider/product_provider.dart';

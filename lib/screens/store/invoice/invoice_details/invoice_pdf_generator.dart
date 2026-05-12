@@ -7,7 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../../model/invoice_model.dart';
+import '../../../../model/invoice_details/invoice_model.dart';
 import '../../../../DBHelper/app_colors.dart';
 
 class InvoicePdfGenerator {

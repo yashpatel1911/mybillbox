@@ -3,25 +3,25 @@ import 'package:flutter/material.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:mybillbox/DBHelper/session_manager.dart';
-import 'package:mybillbox/screens/store/invoice/create_invoice_page.dart';
-import 'package:mybillbox/screens/store/invoice/invoice_details/invoice_detail_page.dart';
-import 'package:mybillbox/screens/store/invoice/invoice_details/invoice_pdf_generator.dart';
+import 'package:mybillbox/model/purchase_details/purchase_model.dart';
+import 'package:mybillbox/provider/purchase_provider.dart';
+import 'package:mybillbox/screens/purchase_ui/create_purchase_page.dart';
+import 'package:mybillbox/screens/purchase_ui/purchase_details/purchase_detail_page.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../DBHelper/app_colors.dart';
-import '../DBHelper/app_constant.dart';
-import '../model/invoice_details/invoice_model.dart';
-import '../model/invoice_details/dashboard_stats_model.dart';
-import '../provider/invoice_provider.dart';
 
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+import '../../../DBHelper/app_colors.dart';
+import '../../../DBHelper/app_constant.dart';
+import '../../../model/purchase_details/purchase_dashboard_stats_model.dart';
+
+class PurchaseScreen extends StatefulWidget {
+  const PurchaseScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<PurchaseScreen> createState() => _PurchaseScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen>
+class _PurchaseScreenState extends State<PurchaseScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _anim;
   late Animation<double> _fade;
@@ -67,7 +67,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _onScroll() {
     if (_scrollCtrl.position.pixels >=
         _scrollCtrl.position.maxScrollExtent - 200) {
-      final provider = context.read<InvoiceProvider>();
+      final provider = context.read<PurchaseProvider>();
       if (_showToday) {
         provider.loadMoreToday();
       } else {
@@ -80,9 +80,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _loadAll() async {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      final provider = context.read<InvoiceProvider>();
+      final provider = context.read<PurchaseProvider>();
       await Future.wait([
-        provider.fetchInvoices(),
+        provider.fetchPurchases(),
         provider.fetchDashboardStats(),
       ]);
     });
@@ -121,10 +121,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _applyFilters() {
     if (!mounted) return;
     final p = _filterParams;
-    final provider = context.read<InvoiceProvider>();
+    final provider = context.read<PurchaseProvider>();
 
     Future.wait([
-      provider.fetchInvoices(
+      provider.fetchPurchases(
         search: p['search'],
         paymentStatus: p['paymentStatus'],
         dateFrom: p['dateFrom'],
@@ -139,10 +139,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     ]);
   }
 
-  Future<void> _goToCreateInvoice() async {
+  Future<void> _goToCreatePurchase() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const CreateInvoicePage()),
+      MaterialPageRoute(builder: (_) => const CreatePurchasePage()),
     );
     if (mounted) {
       // Refresh with active filters preserved
@@ -185,13 +185,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       .toStringAsFixed(0)
       .replaceAllMapped(RegExp(r'(\d)(?=(\d{2})+(\d)\b)'), (m) => '${m[1]},');
 
-  String _greeting() {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good Morning 🌤';
-    if (h < 17) return 'Good Afternoon ☀️';
-    return 'Good Evening 🌙';
-  }
-
   Color _statusColor(String status) {
     switch (status) {
       case 'paid':
@@ -224,20 +217,20 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Scaffold(
       backgroundColor: AppColors.pageBg,
       floatingActionButton: FloatingActionButton(
-        heroTag: 'new_invoice',
-        onPressed: _goToCreateInvoice,
+        heroTag: 'new_purchase',
+        onPressed: _goToCreatePurchase,
         backgroundColor: AppColors.primary,
         elevation: 2,
         child: const Icon(Icons.add_rounded, color: Colors.white, size: 26),
       ),
       body: FadeTransition(
         opacity: _fade,
-        child: Consumer<InvoiceProvider>(
+        child: Consumer<PurchaseProvider>(
           builder: (ctx, provider, _) {
             // ── Server already filtered both lists ──
-            final invoicesToShow = _showToday
-                ? provider.todayInvoices
-                : provider.allInvoices;
+            final purchasesToShow = _showToday
+                ? provider.todayPurchases
+                : provider.allPurchase;
 
             return RefreshIndicator(
               onRefresh: _loadAll,
@@ -280,13 +273,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                             const SizedBox(height: 14),
                           ],
 
-                          _recentHeader(invoicesToShow.length),
+                          _recentHeader(purchasesToShow.length),
                           const SizedBox(height: 12),
 
-                          // ── Invoice List ──────────────
+                          // ── Purchase List ──────────────
                           provider.isLoading
                               ? _loadingState()
-                              : _recentInvoices(invoicesToShow),
+                              : _recentPurchases(purchasesToShow),
 
                           // ── Load More Spinner ─────────
                           if (provider.isLoadingMore)
@@ -311,7 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 final noMore = _showToday
                                     ? !provider.hasMoreToday
                                     : !provider.hasMoreAll;
-                                final hasItems = invoicesToShow.isNotEmpty;
+                                final hasItems = purchasesToShow.isNotEmpty;
                                 if (noMore && hasItems) {
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -319,7 +312,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     ),
                                     child: Center(
                                       child: Text(
-                                        'All invoices loaded',
+                                        'All Purchases loaded',
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: AppColors.textLight,
@@ -353,49 +346,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       backgroundColor: AppColors.cardBg,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _greeting(),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textMedium,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-              Text(
-                '${SessionManager().name}',
-                style: const TextStyle(
-                  fontSize: 17,
-                  color: AppColors.textDark,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              _topBtn(Icons.notifications_none_rounded, badge: true),
-              const SizedBox(width: 10),
-              /* CircleAvatar(
-                radius: 19,
-                backgroundColor: AppColors.primary.withOpacity(0.1),
-                child: Text(
-                  '${SessionManager().name.substring(0, 2).toUpperCase()}',
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-              ),*/
-            ],
-          ),
-        ],
+      title: Text(
+        'Purchase',
+        style: const TextStyle(
+          color: AppColors.textMedium,
+          fontWeight: FontWeight.w400,
+        ),
       ),
     );
   }
@@ -493,7 +449,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   });
                 },
                 decoration: InputDecoration(
-                  hintText: 'Search by name, invoice no...',
+                  hintText: 'Search by name, purchase no...',
                   hintStyle: const TextStyle(
                     color: AppColors.textLight,
                     fontSize: 13,
@@ -716,7 +672,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Filter Invoices',
+                    'Filter Purchases',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -930,14 +886,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ── Stat Cards ────────────────────────────────
-  Widget _statCards(DashboardStatsModel stats, bool loading) {
+  Widget _statCards(PurchaseDashboardStatsModel stats, bool loading) {
     final cards = [
       {
         'label': 'Total Billed',
         'value': '₹${_fmt(stats.totalBilled)}',
         'icon': Icons.account_balance_wallet_outlined,
         'color': AppColors.primary,
-        'sub': '${stats.totalInvoices} Invoices',
+        'sub': '${stats.totalPurchases} Purchases',
       },
       {
         'label': 'Collected',
@@ -1047,7 +1003,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ── Cash / Online Row ─────────────────────────
-  Widget _paymentMethodRow(DashboardStatsModel stats, bool loading) {
+  Widget _paymentMethodRow(PurchaseDashboardStatsModel stats, bool loading) {
     return Row(
       children: [
         _methodCard(
@@ -1138,7 +1094,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          _showToday ? 'Today\'s Invoices' : 'All Invoices',
+          _showToday ? 'Today\'s Purchases' : 'All Purchases',
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -1223,10 +1179,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ── Invoice List ──────────────────────────────
-  Widget _recentInvoices(List<InvoiceModel> invoices) {
+  // ── Purchase List ──────────────────────────────
+  Widget _recentPurchases(List<PurchaseModel> purchases) {
     // Today: still cap at 4 visible | All Time: show all loaded pages
-    final list = _showToday ? invoices.take(4).toList() : invoices;
+    final list = _showToday ? purchases.take(4).toList() : purchases;
 
     if (list.isEmpty) {
       return Container(
@@ -1257,7 +1213,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
             const SizedBox(height: 12),
             Text(
-              _hasActiveFilter ? 'No results found' : 'No invoices yet',
+              _hasActiveFilter ? 'No results found' : 'No purchasess yet',
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -1268,7 +1224,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             Text(
               _hasActiveFilter
                   ? 'Try changing your filters'
-                  : 'Tap + to create your first invoice',
+                  : 'Tap + to create your first purchases',
               style: const TextStyle(fontSize: 12, color: AppColors.textMedium),
             ),
             if (_hasActiveFilter) ...[
@@ -1304,7 +1260,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       children: list.map((inv) {
         final c = _statusColor(inv.paymentStatus);
         return GestureDetector(
-          onTap: () => Get.to(InvoiceDetailPage(invoiceId: inv.invoiceId)),
+          onTap: () => Get.to(PurchaseDetailPage(purchaseId: inv.purchaseId)),
           child: Container(
             margin: const EdgeInsets.only(bottom: 10),
             decoration: BoxDecoration(
@@ -1339,7 +1295,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // ── Name + invoice no ──
+                      // ── Name + purchases no ──
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1356,7 +1312,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              inv.invoiceNumber,
+                              inv.purchaseNumber,
                               style: const TextStyle(
                                 color: AppColors.textLight,
                                 fontSize: 11.5,
@@ -1425,7 +1381,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        inv.invoiceDate,
+                        inv.purchaseDate,
                         style: const TextStyle(
                           fontSize: 11.5,
                           color: AppColors.textLight,
@@ -1433,37 +1389,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                       const Spacer(),
                       // Edit
-                      _InvoiceActionBtn(
+                      _PurchasesActionBtn(
                         icon: Icons.edit_outlined,
                         label: 'Edit',
                         color: AppColors.primary,
                         bgColor: AppColors.primary,
-                        onTap: () =>
-                            Get.to(InvoiceDetailPage(invoiceId: inv.invoiceId)),
+                        onTap: () => Get.to(
+                          PurchaseDetailPage(purchaseId: inv.purchaseId),
+                        ),
                       ),
                       const SizedBox(width: 6),
-                      // PDF
-                      _InvoiceActionBtn(
-                        icon: Icons.picture_as_pdf_outlined,
-                        label: 'PDF',
-                        color: AppColors.orange,
-                        bgColor: AppColors.orange,
-                        onTap: () async {
-                          // Fetch full invoice detail (list items are lightweight)
-                          final provider = context.read<InvoiceProvider>();
-                          final full = await provider.fetchInvoiceById(
-                            inv.invoiceId,
-                          );
-                          if (full != null && context.mounted) {
-                            InvoicePdfGenerator.showPreview(context, full);
-                          }
-                        },
-                      ),
+
                       const SizedBox(width: 6),
                       // Cancel
-                      _InvoiceActionBtn(
-                        icon: Icons.cancel_outlined,
-                        label: 'Cancel',
+                      _PurchasesActionBtn(
+                        icon: Icons.delete_outline_outlined,
+                        label: 'Delete',
                         color: AppColors.red,
                         bgColor: AppColors.red,
                         onTap: () => _confirmCancel(inv),
@@ -1480,14 +1421,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ── Confirm Cancel Dialog ─────────────────────
-  void _confirmCancel(InvoiceModel inv) {
+  void _confirmCancel(PurchaseModel inv) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.cardBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          'Cancel Invoice',
+          'Cancel Purchase',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -1495,7 +1436,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
         content: Text(
-          'Cancel ${inv.invoiceNumber} for ${inv.customerName}?\nThis action cannot be undone.',
+          'Cancel ${inv.purchaseNumber} for ${inv.customerName}?\nThis action cannot be undone.',
           style: const TextStyle(fontSize: 13, color: AppColors.textMedium),
         ),
         actions: [
@@ -1510,13 +1451,13 @@ class _DashboardScreenState extends State<DashboardScreen>
             onPressed: () async {
               Navigator.pop(context);
               try {
-                final res = await context.read<InvoiceProvider>().cancelInvoice(
-                  inv.invoiceId,
-                );
+                final res = await context
+                    .read<PurchaseProvider>()
+                    .cancelPurchase(inv.purchaseId);
                 if (mounted) {
                   if (res['status'] == true) {
                     AppConstant.successMessage(
-                      'Invoice cancelled successfully',
+                      'Purchase cancelled successfully',
                       context,
                     );
                     // Refresh with active filters preserved
@@ -1542,7 +1483,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
             child: const Text(
-              'Cancel Invoice',
+              'Cancel Purchase',
               style: TextStyle(color: Colors.white, fontSize: 13),
             ),
           ),
@@ -1552,15 +1493,15 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 }
 
-// ── Invoice Action Button ────────────────────────────────
-class _InvoiceActionBtn extends StatelessWidget {
+// ── Purchases Action Button ────────────────────────────────
+class _PurchasesActionBtn extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
   final Color bgColor;
   final VoidCallback onTap;
 
-  const _InvoiceActionBtn({
+  const _PurchasesActionBtn({
     required this.icon,
     required this.label,
     required this.color,

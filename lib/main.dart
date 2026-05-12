@@ -3,9 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:mybillbox/provider/category_provider.dart';
 import 'package:mybillbox/provider/employee_provider.dart';
+import 'package:mybillbox/provider/expenses_provider/expense_category_provider.dart';
+import 'package:mybillbox/provider/expenses_provider/expense_provider.dart';
 import 'package:mybillbox/provider/invoice_provider.dart';
 import 'package:mybillbox/provider/product_provider.dart';
 import 'package:mybillbox/provider/profile_provider.dart';
+import 'package:mybillbox/provider/purchase_provider.dart';
 import 'package:provider/provider.dart';
 import 'DBHelper/session_manager.dart';
 import 'screens/splash_screen.dart';
@@ -37,6 +40,9 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider(create: (_) => EmployeeProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => ExpenseCategoryProvider()),
+        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
+        ChangeNotifierProvider(create: (_) => PurchaseProvider()),
       ],
       child: MyBillBoxApp(),
     ),

@@ -1,28 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mybillbox/model/purchase_details/purchase_model.dart';
+import 'package:mybillbox/provider/purchase_provider.dart';
+import 'package:mybillbox/screens/purchase_ui/purchase_details/purchase_widgets.dart';
 import 'package:provider/provider.dart';
 import '../../../../DBHelper/app_colors.dart';
 import '../../../../DBHelper/app_constant.dart';
-import '../../../../model/invoice_details/invoice_model.dart';
-import '../../../../provider/invoice_provider.dart';
-import 'invoice_widgets.dart';
 
-// ─── Header card (invoice number + status badge) ─────
-class InvoiceHeaderCard extends StatelessWidget {
-  final InvoiceModel invoice;
+// ─── Header card (purchase number + status badge) ─────
+class PurchaseHeaderCard extends StatelessWidget {
+  final PurchaseModel purchase;
   final Color Function(String) statusColor;
   final String Function(String) statusLabel;
 
-  const InvoiceHeaderCard({
+  const PurchaseHeaderCard({
     super.key,
-    required this.invoice,
+    required this.purchase,
     required this.statusColor,
     required this.statusLabel,
   });
 
   @override
   Widget build(BuildContext context) {
-    final c = statusColor(invoice.paymentStatus);
+    final c = statusColor(purchase.paymentStatus);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -42,7 +42,7 @@ class InvoiceHeaderCard extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                invoice.customerName[0],
+                purchase.customerName[0],
                 style: const TextStyle(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w700,
@@ -58,7 +58,7 @@ class InvoiceHeaderCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  invoice.invoiceNumber,
+                  purchase.purchaseNumber,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -66,9 +66,11 @@ class InvoiceHeaderCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  invoice.invoiceDate,
+                  purchase.purchaseDate,
                   style: const TextStyle(
-                      fontSize: 12, color: AppColors.textLight),
+                    fontSize: 12,
+                    color: AppColors.textLight,
+                  ),
                 ),
               ],
             ),
@@ -78,14 +80,16 @@ class InvoiceHeaderCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: c.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  statusLabel(invoice.paymentStatus),
+                  statusLabel(purchase.paymentStatus),
                   style: TextStyle(
                     color: c,
                     fontSize: 12,
@@ -93,11 +97,13 @@ class InvoiceHeaderCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (invoice.isCancelled) ...[
+              if (purchase.isCancelled) ...[
                 const SizedBox(height: 4),
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.red.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -121,10 +127,10 @@ class InvoiceHeaderCard extends StatelessWidget {
 }
 
 // ─── Customer details card ───────────────────────────
-class InvoiceCustomerCard extends StatelessWidget {
-  final InvoiceModel invoice;
+class PurchaseCustomerCard extends StatelessWidget {
+  final PurchaseModel purchase;
 
-  const InvoiceCustomerCard({super.key, required this.invoice});
+  const PurchaseCustomerCard({super.key, required this.purchase});
 
   @override
   Widget build(BuildContext context) {
@@ -132,16 +138,16 @@ class InvoiceCustomerCard extends StatelessWidget {
       title: 'Customer Details',
       child: Column(
         children: [
-          DetailRow(label: 'Name', value: invoice.customerName),
-          DetailRow(label: 'Mobile', value: invoice.customerMobile),
+          DetailRow(label: 'Name', value: purchase.customerName),
+          DetailRow(label: 'Mobile', value: purchase.customerMobile),
           DetailRow(
             label: 'Date',
             value: DateFormat('dd MMM yyyy').format(
-              DateTime.tryParse(invoice.invoiceDate) ?? DateTime.now(),
+              DateTime.tryParse(purchase.purchaseDate) ?? DateTime.now(),
             ),
           ),
-          if (invoice.notes.isNotEmpty)
-            DetailRow(label: 'Notes', value: invoice.notes),
+          if (purchase.notes.isNotEmpty)
+            DetailRow(label: 'Notes', value: purchase.notes),
         ],
       ),
     );
@@ -149,22 +155,22 @@ class InvoiceCustomerCard extends StatelessWidget {
 }
 
 // ─── Items list card ─────────────────────────────────
-class InvoiceItemsCard extends StatelessWidget {
-  final InvoiceModel invoice;
+class PurchaseItemsCard extends StatelessWidget {
+  final PurchaseModel purchase;
   final String Function(double) fmt;
 
-  const InvoiceItemsCard({
+  const PurchaseItemsCard({
     super.key,
-    required this.invoice,
+    required this.purchase,
     required this.fmt,
   });
 
   @override
   Widget build(BuildContext context) {
     return DetailCard(
-      title: 'Items (${invoice.items.length})',
+      title: 'Items (${purchase.items.length})',
       child: Column(
-        children: invoice.items.map((item) {
+        children: purchase.items.map((item) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 7),
             child: Row(
@@ -216,7 +222,9 @@ class InvoiceItemsCard extends StatelessWidget {
                         Text(
                           'Discount: ₹${fmt(item.itemDiscount)}',
                           style: const TextStyle(
-                              fontSize: 11, color: AppColors.red),
+                            fontSize: 11,
+                            color: AppColors.red,
+                          ),
                         ),
                     ],
                   ),
@@ -239,13 +247,13 @@ class InvoiceItemsCard extends StatelessWidget {
 }
 
 // ─── Payment summary card ────────────────────────────
-class InvoiceSummaryCard extends StatelessWidget {
-  final InvoiceModel invoice;
+class PurchaseSummaryCard extends StatelessWidget {
+  final PurchaseModel purchase;
   final String Function(double) fmt;
 
-  const InvoiceSummaryCard({
+  const PurchaseSummaryCard({
     super.key,
-    required this.invoice,
+    required this.purchase,
     required this.fmt,
   });
 
@@ -255,12 +263,12 @@ class InvoiceSummaryCard extends StatelessWidget {
       title: 'Payment Summary',
       child: Column(
         children: [
-          DetailRow(label: 'Subtotal', value: '₹${fmt(invoice.subTotal)}'),
-          if (invoice.discountType != null && invoice.discountAmount > 0)
+          DetailRow(label: 'Subtotal', value: '₹${fmt(purchase.subTotal)}'),
+          if (purchase.discountType != null && purchase.discountAmount > 0)
             DetailRow(
               label:
-              'Discount (${invoice.discountType == 'percent' ? '${invoice.discountValue.toStringAsFixed(0)}%' : 'flat'})',
-              value: '− ₹${fmt(invoice.discountAmount)}',
+                  'Discount (${purchase.discountType == 'percent' ? '${purchase.discountValue.toStringAsFixed(0)}%' : 'flat'})',
+              value: '− ₹${fmt(purchase.discountAmount)}',
               valueColor: AppColors.red,
             ),
           const Padding(
@@ -279,7 +287,7 @@ class InvoiceSummaryCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '₹${fmt(invoice.totalAmount)}',
+                '₹${fmt(purchase.totalAmount)}',
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -291,14 +299,15 @@ class InvoiceSummaryCard extends StatelessWidget {
           const SizedBox(height: 8),
           DetailRow(
             label: 'Amount Paid',
-            value: '₹${fmt(invoice.amountPaid)}',
+            value: '₹${fmt(purchase.amountPaid)}',
             valueColor: AppColors.green,
           ),
           DetailRow(
             label: 'Amount Due',
-            value: '₹${fmt(invoice.amountDue)}',
-            valueColor:
-            invoice.amountDue > 0 ? AppColors.red : AppColors.green,
+            value: '₹${fmt(purchase.amountDue)}',
+            valueColor: purchase.amountDue > 0
+                ? AppColors.red
+                : AppColors.green,
           ),
         ],
       ),
@@ -308,15 +317,15 @@ class InvoiceSummaryCard extends StatelessWidget {
 
 // ─── Record payment card (view mode only) ───────────
 class AddPaymentCard extends StatefulWidget {
-  final InvoiceModel invoice;
-  final int invoiceId;
+  final PurchaseModel purchase;
+  final int purchaseId;
   final String Function(double) fmt;
   final VoidCallback onPaymentSuccess;
 
   const AddPaymentCard({
     super.key,
-    required this.invoice,
-    required this.invoiceId,
+    required this.purchase,
+    required this.purchaseId,
     required this.fmt,
     required this.onPaymentSuccess,
   });
@@ -340,10 +349,13 @@ class _AddPaymentCardState extends State<AddPaymentCard> {
   }
 
   double get _cashAmt => double.tryParse(_cashCtrl.text) ?? 0;
+
   double get _onlineAmt => double.tryParse(_onlineCtrl.text) ?? 0;
+
   double get _totalPaid =>
       (_useCash ? _cashAmt : 0) + (_useOnline ? _onlineAmt : 0);
-  double get _amountDue => widget.invoice.amountDue;
+
+  double get _amountDue => widget.purchase.amountDue;
 
   List<Map<String, dynamic>> get _payments {
     final list = <Map<String, dynamic>>[];
@@ -356,8 +368,7 @@ class _AddPaymentCardState extends State<AddPaymentCard> {
 
   Future<void> _submit() async {
     if (!_useCash && !_useOnline) {
-      AppConstant.warningMessage(
-          'Select at least one payment method', context);
+      AppConstant.warningMessage('Select at least one payment method', context);
       return;
     }
     if (_totalPaid <= 0) {
@@ -365,17 +376,15 @@ class _AddPaymentCardState extends State<AddPaymentCard> {
       return;
     }
     if (_totalPaid > _amountDue) {
-      AppConstant.warningMessage(
-          'Total paid exceeds due amount', context);
+      AppConstant.warningMessage('Total paid exceeds due amount', context);
       return;
     }
     setState(() => _paying = true);
     try {
-      final res = await context.read<InvoiceProvider>().addPayment(
-        invoiceId: widget.invoiceId,
+      final res = await context.read<PurchaseProvider>().addPayment(
+        purchaseId: widget.purchaseId,
         payments: _payments,
-        paymentDate:
-        DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        paymentDate: DateFormat('yyyy-MM-dd').format(DateTime.now()),
       );
       if (!mounted) return;
       if (res['status'] == true) {
@@ -510,23 +519,27 @@ class _AddPaymentCardState extends State<AddPaymentCard> {
                 backgroundColor: AppColors.green,
                 minimumSize: const Size(0, 46),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 0,
               ),
               child: _paying
                   ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
-              )
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Text(
-                'Record Payment',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white),
-              ),
+                      'Record Payment',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ),
         ],

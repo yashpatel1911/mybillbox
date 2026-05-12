@@ -5,17 +5,17 @@ import 'package:intl/intl.dart';
 import '../../../DBHelper/app_colors.dart';
 import '../../../DBHelper/app_constant.dart';
 import '../../../model/product_model.dart';
-import '../../../provider/invoice_provider.dart';
+import '../../../provider/purchase_provider.dart';
 import '../../../provider/product_provider.dart';
 
-class CreateInvoicePage extends StatefulWidget {
-  const CreateInvoicePage({super.key});
+class CreatePurchasePage extends StatefulWidget {
+  const CreatePurchasePage({super.key});
 
   @override
-  State<CreateInvoicePage> createState() => _CreateInvoicePageState();
+  State<CreatePurchasePage> createState() => _CreatePurchasePageState();
 }
 
-class _CreateInvoicePageState extends State<CreateInvoicePage> {
+class _CreatePurchasePageState extends State<CreatePurchasePage> {
   int _step = 1;
   bool _submitting = false;
 
@@ -23,14 +23,14 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
   final _nameCtrl = TextEditingController();
   final _mobileCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
-  DateTime _invoiceDate = DateTime.now();
+  DateTime _purchaseDate = DateTime.now();
 
   // ── Step 2 ────────────────────────────────────────
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
 
-  // ── Cart key = "prodId_size" so same product with different sizes
-  //    gets separate entries. Same product + same size increments qty.
+  // ── Cart key = "prodId_size_counter" so same product with different sizes
+  //    gets separate entries. Every tap = new entry.
   final Map<String, _CartItem> _cart = {};
 
   // ── Tracks the size currently selected per product in the product list
@@ -49,7 +49,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
   String _paymentStatus = 'pending';
 
   // ── Split payment state ───────────────────────────
-  // Each entry: {'method': 'cash'|'online', 'amount': controller}
   final _cashCtrl = TextEditingController(text: '0');
   final _onlineCtrl = TextEditingController(text: '0');
   bool _useCash = false;
@@ -112,19 +111,13 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
       '₹${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{2})+(\d)\b)'), (m) => '${m[1]},')}';
 
   // ── Cart key ──────────────────────────────────────
-  // Uses a unique counter so same product+size can be
-  // added multiple times as completely separate entries
   String _cartKey(int prodId, String size, int counter) =>
       '${prodId}_${size}_$counter';
 
   // ── Add product to cart ───────────────────────────
-  // Size is mandatory — button is disabled until selected.
-  // Every tap creates a NEW separate cart entry regardless
-  // of whether the same product+size already exists.
   void _addToCart(ProductModel product) {
     final prodId = product.prodId!;
     final size = _pendingSize[prodId];
-
     if (size == null) return;
 
     setState(() {
@@ -143,7 +136,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
   void _goNext() {
     if (_step == 1) {
       if (_nameCtrl.text.trim().isEmpty) {
-        AppConstant.warningMessage('Customer name is required', context);
+        AppConstant.warningMessage('Supplier name is required', context);
         return;
       }
       if (_mobileCtrl.text.trim().length < 10) {
@@ -182,14 +175,14 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
       }
       if (_paymentStatus == 'paid' && _totalPaid < _total) {
         AppConstant.warningMessage(
-          'Total paid (${_fmt(_totalPaid)}) must equal invoice total (${_fmt(_total)}) for Paid status',
+          'Total paid (${_fmt(_totalPaid)}) must equal purchase total (${_fmt(_total)}) for Paid status',
           context,
         );
         return;
       }
       if (_totalPaid > _total) {
         AppConstant.warningMessage(
-          'Total paid (${_fmt(_totalPaid)}) cannot exceed invoice total (${_fmt(_total)})',
+          'Total paid (${_fmt(_totalPaid)}) cannot exceed purchase total (${_fmt(_total)})',
           context,
         );
         return;
@@ -210,22 +203,22 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
           )
           .toList();
 
-      final res = await context.read<InvoiceProvider>().createInvoice(
+      final res = await context.read<PurchaseProvider>().createPurchase(
         customerName: _nameCtrl.text.trim(),
         customerMobile: _mobileCtrl.text.trim(),
-        invoiceDate: DateFormat('yyyy-MM-dd').format(_invoiceDate),
+        purchaseDate: DateFormat('yyyy-MM-dd').format(_purchaseDate),
         items: items,
         notes: _notesCtrl.text.trim(),
         discountType: _discountType,
         discountValue: double.tryParse(_discValCtrl.text) ?? 0,
         paymentStatus: _paymentStatus,
         payments: _paymentsPayload,
-        paymentDate: DateFormat('yyyy-MM-dd').format(_invoiceDate),
+        paymentDate: DateFormat('yyyy-MM-dd').format(_purchaseDate),
       );
 
       if (!mounted) return;
       if (res['status'] == true) {
-        AppConstant.successMessage('Invoice created successfully!', context);
+        AppConstant.successMessage('Purchase created successfully!', context);
         Navigator.pop(context);
       } else {
         AppConstant.errorMessage(
@@ -255,7 +248,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
         ),
         title: Text(
           _step == 1
-              ? 'New Invoice'
+              ? 'New Purchase'
               : _step == 2
               ? 'Add Products'
               : 'Review & Confirm',
@@ -285,17 +278,17 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     );
   }
 
-  // ── Step 1: Customer ──────────────────────────────
+  // ── Step 1: Supplier ──────────────────────────────
   Widget _buildStep1() {
     return _Card(
-      title: 'Customer Details',
+      title: 'Supplier Details',
       child: Column(
         children: [
           _Field(
-            label: 'Customer Name *',
+            label: 'Supplier Name *',
             child: TextField(
               controller: _nameCtrl,
-              decoration: _dec('Enter customer name '),
+              decoration: _dec('Enter supplier name'),
               textCapitalization: TextCapitalization.words,
             ),
           ),
@@ -309,16 +302,16 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
             ),
           ),
           _Field(
-            label: 'Invoice Date *',
+            label: 'Purchase Date *',
             child: GestureDetector(
               onTap: () async {
                 final d = await showDatePicker(
                   context: context,
-                  initialDate: _invoiceDate,
+                  initialDate: _purchaseDate,
                   firstDate: DateTime(2020),
                   lastDate: DateTime.now().add(const Duration(days: 30)),
                 );
-                if (d != null) setState(() => _invoiceDate = d);
+                if (d != null) setState(() => _purchaseDate = d);
               },
               child: Container(
                 height: 44,
@@ -332,7 +325,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      DateFormat('dd MMM yyyy').format(_invoiceDate),
+                      DateFormat('dd MMM yyyy').format(_purchaseDate),
                       style: const TextStyle(
                         fontSize: 14,
                         color: AppColors.textDark,
@@ -352,7 +345,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
             label: 'Notes (optional)',
             child: TextField(
               controller: _notesCtrl,
-              decoration: _dec('Any note for this invoice'),
+              decoration: _dec('Any note for this purchase'),
               maxLines: 2,
             ),
           ),
@@ -376,7 +369,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     controller: _searchCtrl,
                     onChanged: (v) {
                       setState(() => _searchQuery = v);
-                      // Debounce: fire API 400ms after user stops typing
                       _searchDebounce?.cancel();
                       _searchDebounce = Timer(
                         const Duration(milliseconds: 400),
@@ -397,7 +389,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                         size: 18,
                         color: AppColors.textLight,
                       ),
-                      // ── Clear button ──
                       suffixIcon: _searchQuery.isNotEmpty
                           ? GestureDetector(
                               onTap: () {
@@ -430,7 +421,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                   ),
                   const SizedBox(height: 10),
 
-                  // ── Loading indicator (initial / search) ──
                   if (provider.loadProduct)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 20),
@@ -441,7 +431,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                         ),
                       ),
                     )
-                  // ── Empty state ──
                   else if (provider.productList.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -455,17 +444,14 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                         ),
                       ),
                     )
-                  // ── Lazy product list + inline load-more ──
                   else
                     ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      // +1 for the load-more spinner row when has_next
                       itemCount:
                           provider.productList.length +
                           (provider.hasMore ? 1 : 0),
                       itemBuilder: (_, i) {
-                        // ── Load-more spinner at the bottom ──
                         if (i == provider.productList.length) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             context.read<ProductProvider>().loadMore();
@@ -485,7 +471,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                           );
                         }
 
-                        // ── Normal product row ──
                         final p = provider.productList[i];
                         return _ProductRow(
                           product: p,
@@ -576,9 +561,9 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
 
     return Column(
       children: [
-        // Customer summary
+        // Supplier summary
         _Card(
-          title: 'Customer',
+          title: 'Supplier',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -592,7 +577,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
               ),
               const SizedBox(height: 2),
               Text(
-                '${_mobileCtrl.text}  ·  ${DateFormat('dd MMM yyyy').format(_invoiceDate)}',
+                '${_mobileCtrl.text}  ·  ${DateFormat('dd MMM yyyy').format(_purchaseDate)}',
                 style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.textLight,
@@ -723,7 +708,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Status chips ─────────────────────
               Row(
                 children: [
                   _StatusChip(
@@ -757,7 +741,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     selected: _paymentStatus == 'paid',
                     onTap: () => setState(() {
                       _paymentStatus = 'paid';
-                      // Auto-fill cash with full total
                       _useCash = true;
                       _useOnline = false;
                       _cashCtrl.text = _total.toStringAsFixed(0);
@@ -767,7 +750,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                 ],
               ),
 
-              // ── Split payment UI ──────────────────
               if (_paymentStatus != 'pending') ...[
                 const SizedBox(height: 16),
                 const Divider(height: 1, color: AppColors.border),
@@ -788,7 +770,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                 ),
                 const SizedBox(height: 12),
 
-                // ── Cash row ──────────────────────
                 _SplitPaymentRow(
                   icon: Icons.money_rounded,
                   label: 'Cash',
@@ -800,7 +781,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     if (!val) {
                       _cashCtrl.text = '0';
                     } else if (_useOnline) {
-                      // Recalculate online as remainder
                       final cashAmt = double.tryParse(_cashCtrl.text) ?? 0;
                       final remaining = _total - cashAmt;
                       _onlineCtrl.text = remaining > 0
@@ -809,7 +789,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     }
                   }),
                   onChanged: (v) => setState(() {
-                    // Auto-fill online with remainder when both enabled
                     if (_useOnline) {
                       final cashAmt = double.tryParse(v) ?? 0;
                       final remaining = _total - cashAmt;
@@ -821,7 +800,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                 ),
                 const SizedBox(height: 10),
 
-                // ── Online row ────────────────────
                 _SplitPaymentRow(
                   icon: Icons.phone_android_rounded,
                   label: 'Online',
@@ -833,7 +811,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     if (!val) {
                       _onlineCtrl.text = '0';
                     } else if (_useCash) {
-                      // Auto-fill online with remainder
                       final cashAmt = double.tryParse(_cashCtrl.text) ?? 0;
                       final remaining = _total - cashAmt;
                       _onlineCtrl.text = remaining > 0
@@ -844,7 +821,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                   onChanged: (_) => setState(() {}),
                 ),
 
-                // ── Live payment summary ──────────
                 if (_useCash || _useOnline) ...[
                   const SizedBox(height: 14),
                   Container(
@@ -914,7 +890,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
             ],
           ),
         ),
-
         const SizedBox(height: 12),
 
         // Summary
@@ -1034,7 +1009,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     )
                   : Text(
                       _step == 3
-                          ? 'Create Invoice'
+                          ? 'Create Purchase'
                           : _step == 2
                           ? 'Review'
                           : 'Continue',
@@ -1079,7 +1054,7 @@ class _CartItem {
   final ProductModel product;
   int qty;
   double unitPrice;
-  String? selectedSize; // always set (size is mandatory)
+  String? selectedSize;
   double itemDiscount;
 
   _CartItem({
@@ -1108,7 +1083,7 @@ class _StepIndicator extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Row(
         children: [
-          _StepDot(n: 1, current: step, label: 'Customer'),
+          _StepDot(n: 1, current: step, label: 'Supplier'),
           _StepLine(done: step > 1),
           _StepDot(n: 2, current: step, label: 'Products'),
           _StepLine(done: step > 2),
@@ -1193,7 +1168,7 @@ class _StepLine extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────
-// _ProductRow — size chips from product.sizes + add button
+// _ProductRow
 // ─────────────────────────────────────────────────────
 class _ProductRow extends StatelessWidget {
   final ProductModel product;
@@ -1210,10 +1185,6 @@ class _ProductRow extends StatelessWidget {
     required this.onAdd,
   });
 
-  // ── Parse sizes from product.sizes string ──────────
-  // e.g. "S,M,L,XL,XXL" → ['S','M','L','XL','XXL']
-  // e.g. "28,30,32,34,36" → ['28','30','32','34','36']
-  // Free size product → ['Free Size']
   List<String> get _sizeOptions {
     if (product.isFreeSize) return ['Free Size'];
     final raw = product.sizes ?? '';
@@ -1247,7 +1218,6 @@ class _ProductRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Product name + price + add button ────
           Row(
             children: [
               Expanded(
@@ -1272,7 +1242,6 @@ class _ProductRow extends StatelessWidget {
                   ],
                 ),
               ),
-              // Cart badge
               if (cartEntries.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.only(right: 8),
@@ -1293,7 +1262,6 @@ class _ProductRow extends StatelessWidget {
                     ),
                   ),
                 ),
-              // Add button — disabled until size selected
               GestureDetector(
                 onTap: selectedSize != null ? onAdd : null,
                 child: AnimatedContainer(
@@ -1324,7 +1292,6 @@ class _ProductRow extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // ── Size chips from product.sizes ─────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -1405,7 +1372,6 @@ class _ProductRow extends StatelessWidget {
             ],
           ),
 
-          // ── Hint when no size selected ────────────
           if (selectedSize == null)
             Padding(
               padding: const EdgeInsets.only(top: 6),
@@ -1425,7 +1391,7 @@ class _ProductRow extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────
-// _CartRow — shows fixed size label (no size chips here)
+// _CartRow
 // ─────────────────────────────────────────────────────
 class _CartRow extends StatelessWidget {
   final _CartItem item;
@@ -1453,7 +1419,6 @@ class _CartRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Name + size badge + remove
           Row(
             children: [
               Expanded(
@@ -1510,11 +1475,9 @@ class _CartRow extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Price + Qty + Total
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Editable price
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1565,7 +1528,6 @@ class _CartRow extends StatelessWidget {
               ),
               const SizedBox(width: 10),
 
-              // Qty
               Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -1595,7 +1557,6 @@ class _CartRow extends StatelessWidget {
               ),
               const SizedBox(width: 10),
 
-              // Line total
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -1623,7 +1584,7 @@ class _CartRow extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────
-// _SplitPaymentRow — toggle + amount field for one method
+// _SplitPaymentRow
 // ─────────────────────────────────────────────────────
 class _SplitPaymentRow extends StatelessWidget {
   final IconData icon;
@@ -1659,7 +1620,6 @@ class _SplitPaymentRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // ── Toggle ──────────────────────────────
           GestureDetector(
             onTap: () => onToggle(!isEnabled),
             child: AnimatedContainer(
@@ -1685,7 +1645,6 @@ class _SplitPaymentRow extends StatelessWidget {
           ),
           const SizedBox(width: 10),
 
-          // ── Icon + Label ─────────────────────────
           Icon(icon, size: 18, color: isEnabled ? color : AppColors.textLight),
           const SizedBox(width: 8),
           Text(
@@ -1699,7 +1658,6 @@ class _SplitPaymentRow extends StatelessWidget {
 
           const Spacer(),
 
-          // ── Amount field (only shown when enabled) ──
           if (isEnabled)
             SizedBox(
               width: 110,
@@ -1758,7 +1716,7 @@ class _SplitPaymentRow extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────
-// _PaySummaryRow — label + colored value in payment box
+// _PaySummaryRow
 // ─────────────────────────────────────────────────────
 class _PaySummaryRow extends StatelessWidget {
   final String label, value;
@@ -1842,63 +1800,6 @@ class _StatusChip extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: selected ? color : AppColors.textMedium,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-// ─────────────────────────────────────────────────────
-// _MethodBtn
-// ─────────────────────────────────────────────────────
-class _MethodBtn extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _MethodBtn({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        height: 48,
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.primary.withOpacity(0.08)
-              : AppColors.pageBg,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.border,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: selected ? AppColors.primary : AppColors.textLight,
-            ),
-            const SizedBox(width: 7),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: selected ? AppColors.primary : AppColors.textMedium,
               ),
             ),
           ],
