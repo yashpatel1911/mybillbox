@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../model/invoice_details/dashboard_stats_model.dart';
 import '../model/invoice_details/invoice_model.dart';
 import '../model/invoice_details/invoice_payment_model.dart';
+import '../model/invoice_details/customer_model.dart';
 import '../api_service/invoice_api_service.dart';
 
 class InvoiceProvider extends ChangeNotifier {
@@ -44,6 +45,14 @@ class InvoiceProvider extends ChangeNotifier {
   DashboardStatsWrapper get statsWrapper => _statsWrapper;
 
   bool get statsLoading => _statsLoading;
+
+  // ── Customer Lookup State ──────────────────────
+  CustomerModel? _lookedUpCustomer;
+  bool _customerLookupLoading = false;
+
+  CustomerModel? get lookedUpCustomer => _lookedUpCustomer;
+
+  bool get customerLookupLoading => _customerLookupLoading;
 
   // ── DASHBOARD STATS ────────────────────────────
   Future<void> fetchDashboardStats({
@@ -189,6 +198,7 @@ class InvoiceProvider extends ChangeNotifier {
 
   // ── CREATE INVOICE ────────────────────────────
   // payments = [{'method': 'cash', 'amount': 300.0}, {'method': 'online', 'amount': 200.0}]
+  // creditToApply = amount to deduct from customer's existing credit balance.
   Future<Map<String, dynamic>> createInvoice({
     required String customerName,
     required String customerMobile,
@@ -197,6 +207,7 @@ class InvoiceProvider extends ChangeNotifier {
     String? notes,
     String? discountType,
     double discountValue = 0,
+    double creditToApply = 0,
     String paymentStatus = 'pending',
     List<Map<String, dynamic>> payments = const [],
     String? paymentDate,
@@ -209,6 +220,7 @@ class InvoiceProvider extends ChangeNotifier {
       notes: notes,
       discountType: discountType,
       discountValue: discountValue,
+      creditToApply: creditToApply,
       paymentStatus: paymentStatus,
       payments: payments,
       paymentDate: paymentDate,
@@ -218,6 +230,18 @@ class InvoiceProvider extends ChangeNotifier {
       allInvoices.insert(0, newInvoice);
       todayInvoices.insert(0, newInvoice);
       invoices = allInvoices;
+
+      // Clear cached customer lookup — balance just changed if credit was used
+      _lookedUpCustomer = null;
+
+      // Refresh stats so dashboard reflects the new invoice + credit usage
+      await fetchDashboardStats(
+        paymentStatus: _activeStatus,
+        dateFrom: _activeDateFrom,
+        dateTo: _activeDateTo,
+        search: _activeSearch,
+      );
+
       notifyListeners();
     }
     return res;
@@ -312,6 +336,70 @@ class InvoiceProvider extends ChangeNotifier {
       print('fetchPayments error: $e');
       return null;
     }
+  }
+
+  // ── RESOLVE OVERPAYMENT ───────────────────────
+  // action: 'refund' (cash returned offline) or 'credit' (added to customer credit_balance)
+  Future<Map<String, dynamic>> resolveOverpayment({
+    required int invoiceId,
+    required String action,
+  }) async {
+    final res = await _api.resolveOverpayment(
+      invoiceId: invoiceId,
+      action: action,
+    );
+    if (res['status'] == true) {
+      final updated = InvoiceModel.fromJson(res['data']);
+
+      // Sync local lists so any banner/badge disappears immediately
+      final allIdx = allInvoices.indexWhere((e) => e.invoiceId == invoiceId);
+      if (allIdx != -1) allInvoices[allIdx] = updated;
+      final todayIdx = todayInvoices.indexWhere(
+        (e) => e.invoiceId == invoiceId,
+      );
+      if (todayIdx != -1) todayInvoices[todayIdx] = updated;
+      invoices = allInvoices;
+      selectedInvoice = updated;
+
+      // Clear cached customer lookup — if action was 'credit', balance increased
+      _lookedUpCustomer = null;
+
+      // Refresh stats — credit action moves money between buckets on the dashboard
+      await fetchDashboardStats(
+        paymentStatus: _activeStatus,
+        dateFrom: _activeDateFrom,
+        dateTo: _activeDateTo,
+        search: _activeSearch,
+      );
+
+      notifyListeners();
+    }
+    return res;
+  }
+
+  // ── FETCH CUSTOMER BY MOBILE ──────────────────
+  // Returns null when no customer exists. Result is also cached in
+  // `lookedUpCustomer` so the create-invoice screen can show credit balance.
+  Future<CustomerModel?> fetchCustomerByMobile(String mobile) async {
+    try {
+      _customerLookupLoading = true;
+      notifyListeners();
+      _lookedUpCustomer = await _api.fetchCustomerByMobile(mobile);
+      return _lookedUpCustomer;
+    } catch (e) {
+      print('fetchCustomerByMobile error: $e');
+      _lookedUpCustomer = null;
+      return null;
+    } finally {
+      _customerLookupLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ── CLEAR Customer Lookup ─────────────────────
+  void clearCustomerLookup() {
+    _lookedUpCustomer = null;
+    notifyListeners();
   }
 
   // ── CLEAR STATE ───────────────────────────────

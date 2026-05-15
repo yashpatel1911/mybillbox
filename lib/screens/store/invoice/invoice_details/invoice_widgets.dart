@@ -257,7 +257,8 @@ class DiscBtn extends StatelessWidget {
   );
 }
 
-// ─── Cash / Online split row ─────────────────────────
+// ─── Cash / Online / Credit split row ────────────────
+// Now supports optional helperText (used for "Available: ₹500" on credit row).
 class SplitRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -266,6 +267,7 @@ class SplitRow extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<bool> onToggle;
   final ValueChanged<String> onChanged;
+  final String? helperText;
 
   const SplitRow({
     super.key,
@@ -276,6 +278,7 @@ class SplitRow extends StatelessWidget {
     required this.controller,
     required this.onToggle,
     required this.onChanged,
+    this.helperText,
   });
 
   @override
@@ -316,15 +319,31 @@ class SplitRow extends StatelessWidget {
         Icon(icon,
             size: 18, color: isEnabled ? color : AppColors.textLight),
         const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isEnabled ? color : AppColors.textMedium,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isEnabled ? color : AppColors.textMedium,
+                ),
+              ),
+              if (helperText != null)
+                Text(
+                  helperText!,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isEnabled
+                        ? color.withOpacity(0.8)
+                        : AppColors.textLight,
+                  ),
+                ),
+            ],
           ),
         ),
-        const Spacer(),
         if (isEnabled)
           SizedBox(
             width: 110,

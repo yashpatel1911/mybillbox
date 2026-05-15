@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -34,6 +35,23 @@ class InvoicePdfGenerator {
     final font = await PdfGoogleFonts.nunitoRegular();
     final bold = await PdfGoogleFonts.nunitoBold();
 
+    // ── Fetch shop logo from URL if available ────────────────────
+    pw.MemoryImage? logoImage;
+    final logoUrl = invoice.shop?.shLogoUrl;
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      try {
+        final response = await http
+            .get(Uri.parse(logoUrl))
+            .timeout(const Duration(seconds: 5));
+        if (response.statusCode == 200) {
+          logoImage = pw.MemoryImage(response.bodyBytes);
+        }
+      } catch (_) {
+        // Silently skip — PDF still generates without logo
+      }
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────
     String fmt(double v) => v
         .toStringAsFixed(0)
         .replaceAllMapped(RegExp(r'(\d)(?=(\d{2})+(\d)\b)'), (m) => '${m[1]},');
@@ -79,7 +97,7 @@ class InvoicePdfGenerator {
         build: (ctx) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            // ── Header ──────────────────────────────────
+            // ── Header ──────────────────────────────────────────
             pw.Container(
               padding: const pw.EdgeInsets.all(20),
               decoration: pw.BoxDecoration(
@@ -90,31 +108,54 @@ class InvoicePdfGenerator {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
+                  // ── Left: logo + shop name + INVOICE label ──
                   pw.Expanded(
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    child: pw.Row(
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
                       children: [
-                        pw.Text(
-                          invoice.shop?.shName ?? 'My Shop',
-                          style: pw.TextStyle(
-                            font: bold,
-                            fontSize: 20,
-                            color: PdfColors.white,
+                        // Logo (only rendered when fetched successfully)
+                        if (logoImage != null) ...[
+                          pw.ClipRRect(
+                            horizontalRadius: 6,
+                            verticalRadius: 6,
+                            child: pw.Image(
+                              logoImage,
+                              width: 52,
+                              height: 52,
+                              fit: pw.BoxFit.cover,
+                            ),
                           ),
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          'INVOICE',
-                          style: pw.TextStyle(
-                            font: font,
-                            fontSize: 10,
-                            color: _navyLight,
-                            letterSpacing: 3,
-                          ),
+                          pw.SizedBox(width: 14),
+                        ],
+                        // Shop name + label
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              invoice.shop?.shName ?? 'My Shop',
+                              style: pw.TextStyle(
+                                font: bold,
+                                fontSize: 20,
+                                color: PdfColors.white,
+                              ),
+                            ),
+                            pw.SizedBox(height: 4),
+                            pw.Text(
+                              'INVOICE',
+                              style: pw.TextStyle(
+                                font: font,
+                                fontSize: 10,
+                                color: _navyLight,
+                                letterSpacing: 3,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
+
+                  // ── Right: invoice number, date, status badge ──
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
@@ -162,7 +203,7 @@ class InvoicePdfGenerator {
 
             pw.SizedBox(height: 18),
 
-            // ── Customer ─────────────────────────────────
+            // ── Customer ─────────────────────────────────────────
             pw.Container(
               padding: const pw.EdgeInsets.all(14),
               decoration: pw.BoxDecoration(
@@ -225,7 +266,7 @@ class InvoicePdfGenerator {
 
             pw.SizedBox(height: 18),
 
-            // ── Items label ───────────────────────────────
+            // ── Items label ───────────────────────────────────────
             pw.Text(
               'ITEMS',
               style: pw.TextStyle(
@@ -237,7 +278,7 @@ class InvoicePdfGenerator {
             ),
             pw.SizedBox(height: 6),
 
-            // ── Items table ───────────────────────────────
+            // ── Items table ───────────────────────────────────────
             pw.Table(
               border: pw.TableBorder.all(color: _border, width: 0.5),
               columnWidths: {
@@ -283,7 +324,7 @@ class InvoicePdfGenerator {
 
             pw.SizedBox(height: 14),
 
-            // ── Totals ────────────────────────────────────
+            // ── Totals ────────────────────────────────────────────
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.end,
               children: [
@@ -337,7 +378,7 @@ class InvoicePdfGenerator {
 
             pw.SizedBox(height: 16),
 
-            // ── Payment status banner ─────────────────────
+            // ── Payment status banner ─────────────────────────────
             pw.Container(
               padding: const pw.EdgeInsets.all(10),
               decoration: pw.BoxDecoration(
@@ -373,7 +414,7 @@ class InvoicePdfGenerator {
 
             pw.Spacer(),
 
-            // ── Footer ───────────────────────────────────
+            // ── Footer ────────────────────────────────────────────
             pw.Divider(color: _border, thickness: 0.5),
             pw.SizedBox(height: 6),
             pw.Center(
@@ -397,6 +438,7 @@ class InvoicePdfGenerator {
     return pdf;
   }
 
+  // ── Table header cell ────────────────────────────────────────────
   static pw.Widget _th(
     String text,
     pw.Font bold, {
@@ -417,6 +459,7 @@ class InvoicePdfGenerator {
     );
   }
 
+  // ── Table data cell ──────────────────────────────────────────────
   static pw.Widget _td(
     String text,
     pw.Font font, {
@@ -454,6 +497,7 @@ class InvoicePdfGenerator {
     );
   }
 
+  // ── Total row ────────────────────────────────────────────────────
   static pw.Widget _tr(
     String label,
     String value,
@@ -488,6 +532,7 @@ class InvoicePdfGenerator {
     );
   }
 
+  // ── Tint helper ──────────────────────────────────────────────────
   static PdfColor _tint(PdfColor c, double opacity) => PdfColor(
     c.red * opacity + (1 - opacity),
     c.green * opacity + (1 - opacity),
@@ -512,11 +557,10 @@ class _PdfPreviewScreen extends StatelessWidget {
     return file;
   }
 
-  // ── Share PDF (user picks app from share sheet) ──
+  // ── Share PDF (user picks app from share sheet) ──────────────────
   Future<void> _sharePdf(BuildContext context) async {
     try {
       final file = await _saveTempPdf();
-      final phone = _cleanPhone(invoice.customerMobile);
       await Share.shareXFiles(
         [XFile(file.path)],
         text:
@@ -534,7 +578,7 @@ class _PdfPreviewScreen extends StatelessWidget {
     }
   }
 
-  // ── Open WhatsApp chat directly to customer number ──
+  // ── Open WhatsApp chat directly to customer number ───────────────
   Future<void> _openWhatsApp(BuildContext context) async {
     try {
       final phone = _cleanPhone(invoice.customerMobile);
@@ -555,7 +599,7 @@ class _PdfPreviewScreen extends StatelessWidget {
     }
   }
 
-  // ── Clean phone: strip non-digits, add India +91 ──
+  // ── Clean phone: strip non-digits, add India +91 ─────────────────
   String _cleanPhone(String mobile) {
     final raw = mobile.replaceAll(RegExp(r'[^0-9]'), '');
     return raw.length == 10 ? '91$raw' : raw;

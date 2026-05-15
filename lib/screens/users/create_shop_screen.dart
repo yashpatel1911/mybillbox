@@ -2,12 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import '../DBHelper/app_colors.dart';
-import '../DBHelper/app_constant.dart';
-import '../DBHelper/session_manager.dart';
-import '../api_service/api_service.dart';
-import '../model/shop_category_model.dart';
-import 'main_screen.dart';
+import '../../DBHelper/app_colors.dart';
+import '../../DBHelper/app_constant.dart';
+import '../../DBHelper/session_manager.dart';
+import '../../api_service/api_service.dart';
+import '../../model/shop_category_model.dart';
+import '../main_screen.dart';
 
 class CreateShopScreen extends StatefulWidget {
   const CreateShopScreen({super.key});

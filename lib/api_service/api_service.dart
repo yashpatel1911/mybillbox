@@ -7,6 +7,7 @@ import '../model/employee_model.dart';
 import '../model/expense/expense_category_model.dart';
 import '../model/product_model.dart';
 import '../model/profile_model.dart';
+import '../model/report_summary_model.dart';
 import '../model/shop_category_model.dart';
 
 class ServiceDB {
@@ -458,5 +459,31 @@ class ServiceDB {
           token: _token,
         )
         as Map<String, dynamic>;
+  }
+
+  // ─────────────────────────────────────────
+  // REPORTS APIs
+  // ─────────────────────────────────────────
+
+  /// Fetch reports summary for the given date range.
+  /// Returns parsed ReportSummary on success, throws on failure.
+  ///
+  /// Backend wraps response as {status, message, data}.
+  Future<ReportSummary> fetchReportsSummary({
+    required String fromDate, // 'YYYY-MM-DD'
+    required String toDate, // 'YYYY-MM-DD'
+  }) async {
+    final url = '${Environment().reportsSummary}?from=$fromDate&to=$toDate';
+
+    final response = await Api.get(url, token: _token) as Map<String, dynamic>;
+
+    if (response['status'] == true) {
+      return ReportSummary.fromJson(response['data'] as Map<String, dynamic>);
+    }
+
+    // Surface the server message so the provider/UI can show it
+    throw Exception(
+      response['message']?.toString() ?? 'Failed to load summary',
+    );
   }
 }

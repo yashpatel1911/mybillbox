@@ -1,7 +1,7 @@
 class Environment {
   // local urls
-  final apiUrl = 'http://192.168.1.13:8000/api/app/';
-  final categoryImageUrl = 'http://192.168.1.13:8000/media/category_images/';
+  final apiUrl = 'http://192.168.1.9:8000/api/app/';
+  final categoryImageUrl = 'http://192.168.1.9:8000/media/category_images/';
 
   final login = 'login/';
 
@@ -24,6 +24,8 @@ class Environment {
   String updateInvoice = 'update-invoice/';
   String cancelInvoice = 'cancel-invoice/';
   String dashboardStats = 'dashboard-stats/';
+  String resolveOverpayment = 'invoice/';
+  String getCustomerByMobile = 'customer/';
 
   // Payments
   String addInvoicePayment = 'payment-add-invoice/';
@@ -65,4 +67,7 @@ class Environment {
 
   String createShop = 'create-shop/';
   String shopCategories = 'shop/categories/';
+
+  // reports
+  String reportsSummary = 'reports/summary/';
 }

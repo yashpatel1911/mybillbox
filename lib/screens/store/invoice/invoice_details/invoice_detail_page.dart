@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mybillbox/screens/store/invoice/invoice_details/resolve_overpayment_card.dart';
 import 'package:provider/provider.dart';
 import '../../../../DBHelper/app_colors.dart';
 import '../../../../DBHelper/app_constant.dart';
@@ -535,29 +536,45 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
   }
 
   // ── View mode layout ─────────────────────────────────
-  Widget _buildViewMode() => Column(
-    children: [
-      InvoiceHeaderCard(
-        invoice: _invoice!,
-        statusColor: _statusColor,
-        statusLabel: _statusLabel,
-      ),
-      const SizedBox(height: 12),
-      InvoiceCustomerCard(invoice: _invoice!),
-      const SizedBox(height: 12),
-      InvoiceItemsCard(invoice: _invoice!, fmt: _fmt),
-      const SizedBox(height: 12),
-      InvoiceSummaryCard(invoice: _invoice!, fmt: _fmt),
-      const SizedBox(height: 12),
-      if (_invoice!.paymentStatus != 'paid')
-        AddPaymentCard(
-          invoice: _invoice!,
-          invoiceId: widget.invoiceId,
-          fmt: _fmt,
-          onPaymentSuccess: _load,
+  Widget _buildViewMode() {
+    final inv = _invoice!;
+    // Show resolve card if there's any overpayment activity (resolved or not).
+    // Hidden when overpaid_amount is 0 — the normal case.
+    final showOverpaymentCard = inv.overpaidAmount > 0;
+
+    return Column(
+      children: [
+        InvoiceHeaderCard(
+          invoice: inv,
+          statusColor: _statusColor,
+          statusLabel: _statusLabel,
         ),
-    ],
-  );
+
+        // ── Overpayment resolve banner ──
+        // Placed right after header so it's the first thing the user sees
+        // when there's something requiring action.
+        if (showOverpaymentCard) ...[
+          const SizedBox(height: 12),
+          ResolveOverpaymentCard(invoice: inv, fmt: _fmt, onResolved: _load),
+        ],
+
+        const SizedBox(height: 12),
+        InvoiceCustomerCard(invoice: inv),
+        const SizedBox(height: 12),
+        InvoiceItemsCard(invoice: inv, fmt: _fmt),
+        const SizedBox(height: 12),
+        InvoiceSummaryCard(invoice: inv, fmt: _fmt),
+        const SizedBox(height: 12),
+        if (inv.paymentStatus != 'paid')
+          AddPaymentCard(
+            invoice: inv,
+            invoiceId: widget.invoiceId,
+            fmt: _fmt,
+            onPaymentSuccess: _load,
+          ),
+      ],
+    );
+  }
 
   // ── Edit mode layout ─────────────────────────────────
   Widget _buildEditMode() => Column(

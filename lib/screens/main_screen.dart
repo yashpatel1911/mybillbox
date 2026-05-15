@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mybillbox/screens/reports/reports_screen.dart';
 import 'package:mybillbox/screens/store/employee/employees_screen.dart';
 import 'package:mybillbox/screens/store/store_management_screen.dart';
 import 'package:mybillbox/screens/users/profile_screen.dart';
@@ -8,8 +9,7 @@ import '../DBHelper/app_colors.dart';
 import '../DBHelper/session_manager.dart'; // ⚠️ adjust import to your SessionManager path
 import '../provider/category_provider.dart';
 import '../provider/product_provider.dart';
-import 'dashboard_screen.dart';
-import 'other_screen.dart';
+import 'store/invoice/dashboard_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -111,7 +111,7 @@ class _BottomNav extends StatelessWidget {
           child: Row(
             children: List.generate(
               items.length,
-                  (i) => Expanded(
+              (i) => Expanded(
                 child: _NavTile(
                   item: items[i],
                   isActive: current == i,

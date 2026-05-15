@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:get/get_navigation/src/routes/transitions_type.dart';
-import '../DBHelper/app_colors.dart';
-import '../DBHelper/app_constant.dart';
-import '../DBHelper/environment.dart';
-import '../DBHelper/session_manager.dart';
-import '../DBHelper/wp-api.dart';
+import '../../DBHelper/app_colors.dart';
+import '../../DBHelper/app_constant.dart';
+import '../../DBHelper/environment.dart';
+import '../../DBHelper/session_manager.dart';
+import '../../DBHelper/wp-api.dart';
 import 'create_shop_screen.dart';
-import 'main_screen.dart';
+import '../main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

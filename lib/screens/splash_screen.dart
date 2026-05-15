@@ -6,8 +6,8 @@ import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:mybillbox/screens/main_screen.dart';
 import '../DBHelper/app_colors.dart';
 import '../DBHelper/session_manager.dart';
-import 'create_shop_screen.dart';
-import 'login_screen.dart';
+import 'users/create_shop_screen.dart';
+import 'users/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

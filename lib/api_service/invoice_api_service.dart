@@ -1,6 +1,7 @@
 import '../DBHelper/environment.dart';
 import '../DBHelper/session_manager.dart';
 import '../DBHelper/wp-api.dart';
+import '../model/invoice_details/customer_model.dart';
 import '../model/invoice_details/dashboard_stats_model.dart';
 import '../model/invoice_details/invoice_model.dart';
 import '../model/invoice_details/invoice_payment_model.dart';
@@ -30,16 +31,18 @@ class InvoiceApiService {
     String? dateTo,
     String? search,
   }) async {
-    final body = await Api.get(
-      Environment().dashboardStats,
-      query: _filterParams({
-        'payment_status': paymentStatus,
-        'date_from': dateFrom,
-        'date_to': dateTo,
-        'search': search,
-      }),
-      token: _token,
-    ) as Map<String, dynamic>;
+    final body =
+        await Api.get(
+              Environment().dashboardStats,
+              query: _filterParams({
+                'payment_status': paymentStatus,
+                'date_from': dateFrom,
+                'date_to': dateTo,
+                'search': search,
+              }),
+              token: _token,
+            )
+            as Map<String, dynamic>;
 
     if (body['status'] == true) {
       return DashboardStatsWrapper.fromJson(body['data']);
@@ -58,18 +61,20 @@ class InvoiceApiService {
     String? search,
     int pageSize = 10,
   }) async {
-    final body = await Api.get(
-      Environment().getInvoices,
-      query: _filterParams({
-        'page': '$page',
-        'page_size': '$pageSize',
-        'payment_status': paymentStatus,
-        'date_from': dateFrom,
-        'date_to': dateTo,
-        'search': search,
-      }),
-      token: _token,
-    ) as Map<String, dynamic>;
+    final body =
+        await Api.get(
+              Environment().getInvoices,
+              query: _filterParams({
+                'page': '$page',
+                'page_size': '$pageSize',
+                'payment_status': paymentStatus,
+                'date_from': dateFrom,
+                'date_to': dateTo,
+                'search': search,
+              }),
+              token: _token,
+            )
+            as Map<String, dynamic>;
 
     if (body['status'] == true) {
       return body['data'] as Map<String, dynamic>;
@@ -81,10 +86,12 @@ class InvoiceApiService {
   // FETCH SINGLE INVOICE
   // ──────────────────────────────────────────────────
   Future<InvoiceModel> fetchInvoiceById(int invoiceId) async {
-    final body = await Api.get(
-      '${Environment().getInvoiceById}$invoiceId/',
-      token: _token,
-    ) as Map<String, dynamic>;
+    final body =
+        await Api.get(
+              '${Environment().getInvoiceById}$invoiceId/',
+              token: _token,
+            )
+            as Map<String, dynamic>;
 
     if (body['status'] == true) {
       return InvoiceModel.fromJson(body['data']);
@@ -96,6 +103,7 @@ class InvoiceApiService {
   // CREATE INVOICE
   // ──────────────────────────────────────────────────
   // payments = [{'method': 'cash', 'amount': 300}, {'method': 'online', 'amount': 200}]
+  // creditToApply = amount to deduct from customer's existing credit balance
   Future<Map<String, dynamic>> createInvoice({
     required String customerName,
     required String customerMobile,
@@ -104,6 +112,7 @@ class InvoiceApiService {
     String? notes,
     String? discountType,
     double discountValue = 0,
+    double creditToApply = 0,
     String paymentStatus = 'pending',
     List<Map<String, dynamic>> payments = const [],
     String? paymentDate,
@@ -114,6 +123,7 @@ class InvoiceApiService {
       'invoice_date': invoiceDate,
       'items': items,
       'discount_value': discountValue,
+      'credit_to_apply': creditToApply,
       'payment_status': paymentStatus,
       'payments': payments,
       if (notes != null) 'notes': notes,
@@ -121,16 +131,15 @@ class InvoiceApiService {
       if (paymentDate != null) 'payment_date': paymentDate,
     };
 
-    return await Api.post(
-      Environment().createInvoice,
-      body,
-      token: _token,
-    ) as Map<String, dynamic>;
+    return await Api.post(Environment().createInvoice, body, token: _token)
+        as Map<String, dynamic>;
   }
 
   // ──────────────────────────────────────────────────
   // UPDATE INVOICE
   // ──────────────────────────────────────────────────
+  // No signature change — backend now auto-detects overpayments and returns
+  // overpaid_amount + overpayment_resolved in the response.
   Future<Map<String, dynamic>> updateInvoice({
     required int invoiceId,
     String? customerName,
@@ -156,10 +165,11 @@ class InvoiceApiService {
     };
 
     return await Api.patch(
-      '${Environment().updateInvoice}$invoiceId/',
-      body,
-      token: _token,
-    ) as Map<String, dynamic>;
+          '${Environment().updateInvoice}$invoiceId/',
+          body,
+          token: _token,
+        )
+        as Map<String, dynamic>;
   }
 
   // ──────────────────────────────────────────────────
@@ -167,9 +177,10 @@ class InvoiceApiService {
   // ──────────────────────────────────────────────────
   Future<Map<String, dynamic>> cancelInvoice(int invoiceId) async {
     return await Api.delete(
-      '${Environment().cancelInvoice}$invoiceId/',
-      token: _token,
-    ) as Map<String, dynamic>;
+          '${Environment().cancelInvoice}$invoiceId/',
+          token: _token,
+        )
+        as Map<String, dynamic>;
   }
 
   // ──────────────────────────────────────────────────
@@ -188,24 +199,69 @@ class InvoiceApiService {
     };
 
     return await Api.post(
-      '${Environment().addInvoicePayment}$invoiceId/',
-      body,
-      token: _token,
-    ) as Map<String, dynamic>;
+          '${Environment().addInvoicePayment}$invoiceId/',
+          body,
+          token: _token,
+        )
+        as Map<String, dynamic>;
   }
 
   // ──────────────────────────────────────────────────
   // FETCH PAYMENT HISTORY
   // ──────────────────────────────────────────────────
   Future<InvoicePaymentSummaryModel> fetchPayments(int invoiceId) async {
-    final body = await Api.get(
-      '${Environment().fetchInvoicePayments}$invoiceId/',
-      token: _token,
-    ) as Map<String, dynamic>;
+    final body =
+        await Api.get(
+              '${Environment().fetchInvoicePayments}$invoiceId/',
+              token: _token,
+            )
+            as Map<String, dynamic>;
 
     if (body['status'] == true) {
       return InvoicePaymentSummaryModel.fromJson(body['data']);
     }
     throw Exception(body['message'] ?? 'Failed to fetch payments');
+  }
+
+  // ──────────────────────────────────────────────────
+  // RESOLVE OVERPAYMENT
+  // ──────────────────────────────────────────────────
+  // action must be 'refund' or 'credit'.
+  // 'credit' adds the overpaid_amount to customer.credit_balance.
+  // 'refund' just marks resolved — shop hands back cash outside the system.
+  Future<Map<String, dynamic>> resolveOverpayment({
+    required int invoiceId,
+    required String action,
+  }) async {
+    final body = <String, dynamic>{'action': action};
+
+    return await Api.patch(
+          '${Environment().resolveOverpayment}$invoiceId/resolve-overpayment/',
+          body,
+          token: _token,
+        )
+        as Map<String, dynamic>;
+  }
+
+  // ──────────────────────────────────────────────────
+  // FETCH CUSTOMER BY MOBILE
+  // ──────────────────────────────────────────────────
+  // Returns null when no customer exists for this mobile in current shop.
+  // Used before creating an invoice to check available credit balance.
+  Future<CustomerModel?> fetchCustomerByMobile(String mobile) async {
+    final body =
+        await Api.get(
+              Environment().getCustomerByMobile,
+              query: _filterParams({'mobile': mobile}),
+              token: _token,
+            )
+            as Map<String, dynamic>;
+
+    if (body['status'] == true) {
+      final data = body['data'];
+      if (data == null) return null;
+      return CustomerModel.fromJson(data as Map<String, dynamic>);
+    }
+    throw Exception(body['message'] ?? 'Failed to fetch customer');
   }
 }

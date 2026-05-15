@@ -40,10 +40,7 @@ class _ProductPageState extends State<ProductPage> {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductProvider>().getProducts(
-        context,
-        catId: widget.catId,
-      );
+      context.read<ProductProvider>().getProducts(context, catId: widget.catId);
     });
   }
 
@@ -84,8 +81,7 @@ class _ProductPageState extends State<ProductPage> {
         ),
         backgroundColor: success ? AppColors.green : AppColors.red,
         behavior: SnackBarBehavior.floating,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -93,7 +89,7 @@ class _ProductPageState extends State<ProductPage> {
 
   Future<void> _deleteProduct(ProductModel product) async {
     final provider = context.read<ProductProvider>();
-    final success  = await provider.deleteProduct(context, product.prodId);
+    final success = await provider.deleteProduct(context, product.prodId);
     if (!mounted) return;
     _showSnackBar(
       success
@@ -108,20 +104,20 @@ class _ProductPageState extends State<ProductPage> {
     required String prodName,
     required int catId,
     String? sizes,
-    bool isFreeSize  = false,
+    bool isFreeSize = false,
     double? fixPrice,
     File? prodImage,
   }) async {
     final provider = context.read<ProductProvider>();
-    final success  = await provider.updateProduct(
+    final success = await provider.updateProduct(
       context,
-      prodId:     prodId,
-      catId:      catId,
-      prodName:   prodName,
-      sizes:      sizes,
+      prodId: prodId,
+      catId: catId,
+      prodName: prodName,
+      sizes: sizes,
       isFreeSize: isFreeSize,
-      fixPrice:   fixPrice,
-      prodImage:  prodImage,
+      fixPrice: fixPrice,
+      prodImage: prodImage,
     );
     if (!mounted) return;
     Navigator.pop(context);
@@ -243,12 +239,10 @@ class _ProductPageState extends State<ProductPage> {
                       _searchDebounce?.cancel();
                       _searchDebounce = Timer(
                         const Duration(milliseconds: 400),
-                            () => context.read<ProductProvider>().getProducts(
+                        () => context.read<ProductProvider>().getProducts(
                           context,
-                          catId:  widget.catId,
-                          search: value.trim().isEmpty
-                              ? null
-                              : value.trim(),
+                          catId: widget.catId,
+                          search: value.trim().isEmpty ? null : value.trim(),
                         ),
                       );
                     },
@@ -265,22 +259,22 @@ class _ProductPageState extends State<ProductPage> {
                       ),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
-                        icon: Icon(
-                          Icons.clear_rounded,
-                          color: AppColors.textLight,
-                          size: 18,
-                        ),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => searchQuery = '');
-                          _searchDebounce?.cancel();
-                          // Reset to full list
-                          context.read<ProductProvider>().getProducts(
-                            context,
-                            catId: widget.catId,
-                          );
-                        },
-                      )
+                              icon: Icon(
+                                Icons.clear_rounded,
+                                color: AppColors.textLight,
+                                size: 18,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => searchQuery = '');
+                                _searchDebounce?.cancel();
+                                // Reset to full list
+                                context.read<ProductProvider>().getProducts(
+                                  context,
+                                  catId: widget.catId,
+                                );
+                              },
+                            )
                           : null,
                       filled: true,
                       fillColor: AppColors.cardBg,
@@ -322,7 +316,8 @@ class _ProductPageState extends State<ProductPage> {
             backgroundColor: AppColors.primary,
             elevation: 2,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)),
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
         );
       },
@@ -387,10 +382,7 @@ class _ProductPageState extends State<ProductPage> {
             const SizedBox(height: 8),
             Text(
               'Loading more...',
-              style: GoogleFonts.lato(
-                fontSize: 12,
-                color: AppColors.textLight,
-              ),
+              style: GoogleFonts.lato(fontSize: 12, color: AppColors.textLight),
             ),
           ],
         ),
@@ -439,8 +431,7 @@ class _ProductPageState extends State<ProductPage> {
                         icon: Icons.edit_rounded,
                         color: AppColors.primary,
                         bgColor: AppColors.primary.withOpacity(0.15),
-                        onTap: () =>
-                            _showUpdateProductDialog(context, product),
+                        onTap: () => _showUpdateProductDialog(context, product),
                       ),
                       const SizedBox(width: 6),
                       _buildActionButton(
@@ -458,7 +449,9 @@ class _ProductPageState extends State<ProductPage> {
                     left: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.cyan,
                         borderRadius: BorderRadius.circular(20),
@@ -518,7 +511,9 @@ class _ProductPageState extends State<ProductPage> {
                 const SizedBox(height: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: product.isActive
                         ? AppColors.green.withOpacity(0.12)
@@ -530,9 +525,7 @@ class _ProductPageState extends State<ProductPage> {
                     style: GoogleFonts.lato(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
-                      color: product.isActive
-                          ? AppColors.green
-                          : AppColors.red,
+                      color: product.isActive ? AppColors.green : AppColors.red,
                     ),
                   ),
                 ),
@@ -687,7 +680,7 @@ class _ProductPageState extends State<ProductPage> {
               color: AppColors.primary,
               value: loadingProgress.expectedTotalBytes != null
                   ? loadingProgress.cumulativeBytesLoaded /
-                  loadingProgress.expectedTotalBytes!
+                        loadingProgress.expectedTotalBytes!
                   : null,
             ),
           ),
@@ -728,8 +721,7 @@ class _ProductPageState extends State<ProductPage> {
           const SizedBox(height: 16),
           Text(
             'Loading products...',
-            style:
-            GoogleFonts.lato(color: AppColors.textMedium, fontSize: 15),
+            style: GoogleFonts.lato(color: AppColors.textMedium, fontSize: 15),
           ),
         ],
       ),
@@ -767,8 +759,7 @@ class _ProductPageState extends State<ProductPage> {
             searchQuery.isEmpty
                 ? 'Tap + Add Product to get started'
                 : 'Try a different search term',
-            style:
-            GoogleFonts.lato(fontSize: 14, color: AppColors.textMedium),
+            style: GoogleFonts.lato(fontSize: 14, color: AppColors.textMedium),
           ),
         ],
       ),
@@ -781,8 +772,7 @@ class _ProductPageState extends State<ProductPage> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardBg,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
@@ -810,8 +800,7 @@ class _ProductPageState extends State<ProductPage> {
         ),
         content: RichText(
           text: TextSpan(
-            style:
-            GoogleFonts.lato(fontSize: 14, color: AppColors.textMedium),
+            style: GoogleFonts.lato(fontSize: 14, color: AppColors.textMedium),
             children: [
               const TextSpan(text: 'Are you sure you want to delete '),
               TextSpan(
@@ -842,9 +831,9 @@ class _ProductPageState extends State<ProductPage> {
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
             onPressed: () {
               Navigator.pop(context);
@@ -866,12 +855,18 @@ class _ProductPageState extends State<ProductPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: AddProductSheet(
           catId: widget.catId,
-          onSuccess: () => _showSnackBar('Product added successfully!', true),
+          onSuccess: () {
+            // ✅ Refresh the full list after adding
+            context.read<ProductProvider>().getProducts(
+              context,
+              catId: widget.catId,
+            );
+            _showSnackBar('Product added successfully!', true);
+          },
         ),
       ),
     );
@@ -879,10 +874,11 @@ class _ProductPageState extends State<ProductPage> {
 
   // ── Update Product Dialog ─────────────────────
   void _showUpdateProductDialog(BuildContext context, ProductModel product) {
-    final nameController  = TextEditingController(text: product.prodName);
+    final nameController = TextEditingController(text: product.prodName);
     final sizesController = TextEditingController(text: product.sizes ?? '');
     final priceController = TextEditingController(
-        text: product.fixPrice?.toStringAsFixed(0) ?? '');
+      text: product.fixPrice?.toStringAsFixed(0) ?? '',
+    );
     final formKey = GlobalKey<FormState>();
     File? newImage;
     bool isFreeSize = product.isFreeSize;
@@ -894,7 +890,8 @@ class _ProductPageState extends State<ProductPage> {
         builder: (context, dialogSetState) => AlertDialog(
           backgroundColor: AppColors.cardBg,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20)),
+            borderRadius: BorderRadius.circular(20),
+          ),
           titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
           contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
           title: Row(
@@ -905,8 +902,11 @@ class _ProductPageState extends State<ProductPage> {
                   color: AppColors.navActiveBg,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.edit_rounded,
-                    color: AppColors.primary, size: 22),
+                child: Icon(
+                  Icons.edit_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
@@ -935,8 +935,7 @@ class _ProductPageState extends State<ProductPage> {
                         imageQuality: 80,
                       );
                       if (picked != null)
-                        dialogSetState(
-                                () => newImage = File(picked.path));
+                        dialogSetState(() => newImage = File(picked.path));
                     },
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
@@ -955,36 +954,39 @@ class _ProductPageState extends State<ProductPage> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(13),
                         child: newImage != null
-                            ? Image.file(newImage!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity)
+                            ? Image.file(
+                                newImage!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              )
                             : (product.prodImage != null)
-                            ? Image.network(product.prodImage!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity)
+                            ? Image.network(
+                                product.prodImage!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              )
                             : Center(
-                          child: Column(
-                            mainAxisAlignment:
-                            MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_photo_alternate_rounded,
-                                size: 32,
-                                color: AppColors.primary,
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Tap to add image',
-                                style: GoogleFonts.lato(
-                                  color: AppColors.textMedium,
-                                  fontSize: 12,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.add_photo_alternate_rounded,
+                                      size: 32,
+                                      color: AppColors.primary,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Tap to add image',
+                                      style: GoogleFonts.lato(
+                                        color: AppColors.textMedium,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
                       ),
                     ),
                   ),
@@ -1010,7 +1012,9 @@ class _ProductPageState extends State<ProductPage> {
                   // Free size toggle
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.pageBg,
                       borderRadius: BorderRadius.circular(12),
@@ -1018,14 +1022,20 @@ class _ProductPageState extends State<ProductPage> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.straighten_rounded,
-                            color: AppColors.primary, size: 20),
+                        Icon(
+                          Icons.straighten_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text('Free Size',
-                              style: GoogleFonts.lato(
-                                  color: AppColors.textDark,
-                                  fontWeight: FontWeight.w500)),
+                          child: Text(
+                            'Free Size',
+                            style: GoogleFonts.lato(
+                              color: AppColors.textDark,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
                         Switch(
                           value: isFreeSize,
@@ -1053,10 +1063,13 @@ class _ProductPageState extends State<ProductPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel',
-                  style: GoogleFonts.lato(
-                      color: AppColors.textMedium,
-                      fontWeight: FontWeight.w600)),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.lato(
+                  color: AppColors.textMedium,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
             Consumer<ProductProvider>(
               builder: (context, provider, _) => ElevatedButton(
@@ -1065,45 +1078,49 @@ class _ProductPageState extends State<ProductPage> {
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 10),
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
                 ),
                 onPressed: provider.isSubmitting
                     ? null
                     : () {
-                  if (formKey.currentState!.validate()) {
-                    _submitUpdateProduct(
-                      prodId:     product.prodId,
-                      prodName:   nameController.text.trim(),
-                      catId:      product.catId,
-                      sizes:      isFreeSize
-                          ? null
-                          : sizesController.text.trim().isEmpty
-                          ? null
-                          : sizesController.text.trim(),
-                      isFreeSize: isFreeSize,
-                      fixPrice:   priceController.text.trim().isEmpty
-                          ? null
-                          : double.tryParse(
-                          priceController.text.trim()),
-                      prodImage: newImage,
-                    );
-                  }
-                },
+                        if (formKey.currentState!.validate()) {
+                          _submitUpdateProduct(
+                            prodId: product.prodId,
+                            prodName: nameController.text.trim(),
+                            catId: product.catId,
+                            sizes: isFreeSize
+                                ? null
+                                : sizesController.text.trim().isEmpty
+                                ? null
+                                : sizesController.text.trim(),
+                            isFreeSize: isFreeSize,
+                            fixPrice: priceController.text.trim().isEmpty
+                                ? null
+                                : double.tryParse(priceController.text.trim()),
+                            prodImage: newImage,
+                          );
+                        }
+                      },
                 child: provider.isSubmitting
                     ? const SizedBox(
-                  height: 16,
-                  width: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor:
-                    AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-                    : Text('Update',
-                    style:
-                    GoogleFonts.lato(fontWeight: FontWeight.bold)),
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : Text(
+                        'Update',
+                        style: GoogleFonts.lato(fontWeight: FontWeight.bold),
+                      ),
               ),
             ),
           ],
@@ -1123,11 +1140,14 @@ class _ProductPageState extends State<ProductPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.lato(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMedium)),
+        Text(
+          label,
+          style: GoogleFonts.lato(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textMedium,
+          ),
+        ),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
@@ -1135,27 +1155,33 @@ class _ProductPageState extends State<ProductPage> {
           style: GoogleFonts.lato(color: AppColors.textDark, fontSize: 15),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle:
-            GoogleFonts.lato(color: AppColors.textLight, fontSize: 14),
-            prefixIcon:
-            Icon(icon, color: AppColors.primary, size: 20),
+            hintStyle: GoogleFonts.lato(
+              color: AppColors.textLight,
+              fontSize: 14,
+            ),
+            prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
             filled: true,
             fillColor: AppColors.pageBg,
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.border)),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border),
+            ),
             enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.border)),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border),
+            ),
             focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                BorderSide(color: AppColors.primary, width: 1.5)),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+            ),
             errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.red)),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.red),
+            ),
             contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 14),
+              horizontal: 14,
+              vertical: 14,
+            ),
           ),
           validator: validator,
         ),

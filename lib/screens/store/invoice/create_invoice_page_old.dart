@@ -4,56 +4,53 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../DBHelper/app_colors.dart';
 import '../../../DBHelper/app_constant.dart';
+import '../../../model/invoice_details/customer_model.dart';
 import '../../../model/product_model.dart';
 import '../../../provider/invoice_provider.dart';
 import '../../../provider/product_provider.dart';
 
-class CreateInvoicePage extends StatefulWidget {
-  const CreateInvoicePage({super.key});
+class CreateInvoicePageOld extends StatefulWidget {
+  const CreateInvoicePageOld({super.key});
 
   @override
-  State<CreateInvoicePage> createState() => _CreateInvoicePageState();
+  State<CreateInvoicePageOld> createState() => _CreateInvoicePageOldState();
 }
 
-class _CreateInvoicePageState extends State<CreateInvoicePage> {
+class _CreateInvoicePageOldState extends State<CreateInvoicePageOld> {
   int _step = 1;
   bool _submitting = false;
 
-  // ── Step 1 ────────────────────────────────────────
+  // Step 1
   final _nameCtrl = TextEditingController();
   final _mobileCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   DateTime _invoiceDate = DateTime.now();
 
-  // ── Step 2 ────────────────────────────────────────
+  // Customer lookup state
+  Timer? _mobileDebounce;
+  CustomerModel? _lookedUpCustomer;
+  bool _customerLookupLoading = false;
+
+  // Step 2
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
-
-  // ── Cart key = "prodId_size" so same product with different sizes
-  //    gets separate entries. Same product + same size increments qty.
   final Map<String, _CartItem> _cart = {};
-
-  // ── Tracks the size currently selected per product in the product list
   final Map<int, String?> _pendingSize = {};
-
-  // ── Debounce timer for product search ─────────────
   Timer? _searchDebounce;
-
-  // ── Cart entry counter — ensures unique keys even
-  //    for same product + same size added multiple times
   int _cartCounter = 0;
 
-  // ── Step 3 ────────────────────────────────────────
+  // Step 3
   String? _discountType;
   final _discValCtrl = TextEditingController(text: '0');
   String _paymentStatus = 'pending';
 
-  // ── Split payment state ───────────────────────────
-  // Each entry: {'method': 'cash'|'online', 'amount': controller}
+  // Split payment state
   final _cashCtrl = TextEditingController(text: '0');
   final _onlineCtrl = TextEditingController(text: '0');
+  final _creditCtrl = TextEditingController(text: '0');
   bool _useCash = false;
   bool _useOnline = false;
+  bool _useCredit = false;
 
   @override
   void initState() {
@@ -72,11 +69,50 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     _discValCtrl.dispose();
     _cashCtrl.dispose();
     _onlineCtrl.dispose();
+    _creditCtrl.dispose();
     _searchDebounce?.cancel();
+    _mobileDebounce?.cancel();
     super.dispose();
   }
 
-  // ── Calculations ──────────────────────────────────
+  // Customer lookup — fires when mobile field hits exactly 10 digits
+  void _onMobileChanged(String v) {
+    final digits = v.trim();
+    setState(() {});
+
+    _mobileDebounce?.cancel();
+
+    if (digits.length != 10) {
+      if (_lookedUpCustomer != null) {
+        setState(() => _lookedUpCustomer = null);
+      }
+      return;
+    }
+
+    _mobileDebounce = Timer(const Duration(milliseconds: 300), () async {
+      if (!mounted) return;
+      setState(() => _customerLookupLoading = true);
+      try {
+        final customer = await context
+            .read<InvoiceProvider>()
+            .fetchCustomerByMobile(digits);
+        if (!mounted) return;
+        setState(() {
+          _lookedUpCustomer = customer;
+          if (customer != null && _nameCtrl.text.trim().isEmpty) {
+            _nameCtrl.text = customer.name;
+          }
+        });
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _lookedUpCustomer = null);
+      } finally {
+        if (mounted) setState(() => _customerLookupLoading = false);
+      }
+    });
+  }
+
+  // Calculations
   double get _subTotal => _cart.values.fold(0, (s, c) => s + c.lineTotal);
 
   double get _discountAmount {
@@ -88,17 +124,28 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
 
   double get _total => _subTotal - _discountAmount;
 
-  // ── Split payment helpers ─────────────────────────
   double get _cashAmount => double.tryParse(_cashCtrl.text) ?? 0;
 
   double get _onlineAmount => double.tryParse(_onlineCtrl.text) ?? 0;
 
+  double get _creditAmount => double.tryParse(_creditCtrl.text) ?? 0;
+
   double get _totalPaid =>
-      (_useCash ? _cashAmount : 0) + (_useOnline ? _onlineAmount : 0);
+      (_useCash ? _cashAmount : 0) +
+      (_useOnline ? _onlineAmount : 0) +
+      (_useCredit ? _creditAmount : 0);
 
   double get _amountDue => _total - _totalPaid;
 
-  // Build payments list for API
+  bool get _hasCreditAvailable =>
+      _lookedUpCustomer != null && _lookedUpCustomer!.creditBalance > 0;
+
+  double get _maxCreditApplicable {
+    if (!_hasCreditAvailable) return 0;
+    final balance = _lookedUpCustomer!.creditBalance;
+    return balance < _total ? balance : _total;
+  }
+
   List<Map<String, dynamic>> get _paymentsPayload {
     final list = <Map<String, dynamic>>[];
     if (_useCash && _cashAmount > 0)
@@ -108,25 +155,19 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     return list;
   }
 
+  double get _creditToApplyPayload =>
+      (_useCredit && _creditAmount > 0) ? _creditAmount : 0;
+
   String _fmt(double v) =>
       '₹${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{2})+(\d)\b)'), (m) => '${m[1]},')}';
 
-  // ── Cart key ──────────────────────────────────────
-  // Uses a unique counter so same product+size can be
-  // added multiple times as completely separate entries
   String _cartKey(int prodId, String size, int counter) =>
       '${prodId}_${size}_$counter';
 
-  // ── Add product to cart ───────────────────────────
-  // Size is mandatory — button is disabled until selected.
-  // Every tap creates a NEW separate cart entry regardless
-  // of whether the same product+size already exists.
   void _addToCart(ProductModel product) {
     final prodId = product.prodId!;
     final size = _pendingSize[prodId];
-
     if (size == null) return;
-
     setState(() {
       _cartCounter++;
       final key = _cartKey(prodId, size, _cartCounter);
@@ -139,7 +180,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     });
   }
 
-  // ── Navigation ────────────────────────────────────
   void _goNext() {
     if (_step == 1) {
       if (_nameCtrl.text.trim().isEmpty) {
@@ -166,10 +206,33 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     if (_step > 1) setState(() => _step--);
   }
 
-  // ── Submit ────────────────────────────────────────
   Future<void> _submit() async {
+    if (_useCredit) {
+      if (_creditAmount <= 0) {
+        AppConstant.warningMessage(
+          'Credit amount must be greater than 0',
+          context,
+        );
+        return;
+      }
+      if (_creditAmount > _lookedUpCustomer!.creditBalance) {
+        AppConstant.warningMessage(
+          'Credit (${_fmt(_creditAmount)}) exceeds available balance (${_fmt(_lookedUpCustomer!.creditBalance)})',
+          context,
+        );
+        return;
+      }
+      if (_creditAmount > _total) {
+        AppConstant.warningMessage(
+          'Credit (${_fmt(_creditAmount)}) cannot exceed invoice total (${_fmt(_total)})',
+          context,
+        );
+        return;
+      }
+    }
+
     if (_paymentStatus != 'pending') {
-      if (!_useCash && !_useOnline) {
+      if (!_useCash && !_useOnline && !_useCredit) {
         AppConstant.warningMessage(
           'Select at least one payment method',
           context,
@@ -218,6 +281,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
         notes: _notesCtrl.text.trim(),
         discountType: _discountType,
         discountValue: double.tryParse(_discValCtrl.text) ?? 0,
+        creditToApply: _creditToApplyPayload,
         paymentStatus: _paymentStatus,
         payments: _paymentsPayload,
         paymentDate: DateFormat('yyyy-MM-dd').format(_invoiceDate),
@@ -240,7 +304,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     }
   }
 
-  // ── Build ─────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -285,27 +348,33 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     );
   }
 
-  // ── Step 1: Customer ──────────────────────────────
   Widget _buildStep1() {
     return _Card(
       title: 'Customer Details',
       child: Column(
         children: [
           _Field(
+            label: 'Mobile Number *',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _mobileCtrl,
+                  keyboardType: TextInputType.phone,
+                  maxLength: 10,
+                  onChanged: _onMobileChanged,
+                  decoration: _dec('10-digit mobile number'),
+                ),
+                _buildCustomerPill(),
+              ],
+            ),
+          ),
+          _Field(
             label: 'Customer Name *',
             child: TextField(
               controller: _nameCtrl,
               decoration: _dec('Enter customer name '),
               textCapitalization: TextCapitalization.words,
-            ),
-          ),
-          _Field(
-            label: 'Mobile Number *',
-            child: TextField(
-              controller: _mobileCtrl,
-              keyboardType: TextInputType.phone,
-              maxLength: 10,
-              decoration: _dec('10-digit mobile number'),
             ),
           ),
           _Field(
@@ -361,13 +430,99 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     );
   }
 
-  // ── Step 2: Products ──────────────────────────────
+  Widget _buildCustomerPill() {
+    if (_customerLookupLoading) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Checking customer records...',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.textLight,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_lookedUpCustomer == null) return const SizedBox.shrink();
+
+    final c = _lookedUpCustomer!;
+    final hasCredit = c.creditBalance > 0;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: hasCredit
+              ? AppColors.green.withOpacity(0.08)
+              : AppColors.primary.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: hasCredit
+                ? AppColors.green.withOpacity(0.3)
+                : AppColors.primary.withOpacity(0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              hasCredit
+                  ? Icons.account_balance_wallet_rounded
+                  : Icons.person_outline_rounded,
+              size: 14,
+              color: hasCredit ? AppColors.green : AppColors.primary,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Returning customer · ${c.name}',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: hasCredit ? AppColors.green : AppColors.primary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (hasCredit)
+                    Text(
+                      '${_fmt(c.creditBalance)} credit available',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: AppColors.textMedium,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildStep2() {
     return Consumer<ProductProvider>(
       builder: (ctx, provider, _) {
         return Column(
           children: [
-            // ── Product search + list ───────────────
             _Card(
               title: 'Search Products',
               child: Column(
@@ -376,7 +531,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     controller: _searchCtrl,
                     onChanged: (v) {
                       setState(() => _searchQuery = v);
-                      // Debounce: fire API 400ms after user stops typing
                       _searchDebounce?.cancel();
                       _searchDebounce = Timer(
                         const Duration(milliseconds: 400),
@@ -397,7 +551,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                         size: 18,
                         color: AppColors.textLight,
                       ),
-                      // ── Clear button ──
                       suffixIcon: _searchQuery.isNotEmpty
                           ? GestureDetector(
                               onTap: () {
@@ -429,8 +582,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-
-                  // ── Loading indicator (initial / search) ──
                   if (provider.loadProduct)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 20),
@@ -441,7 +592,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                         ),
                       ),
                     )
-                  // ── Empty state ──
                   else if (provider.productList.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -455,17 +605,14 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                         ),
                       ),
                     )
-                  // ── Lazy product list + inline load-more ──
                   else
                     ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      // +1 for the load-more spinner row when has_next
                       itemCount:
                           provider.productList.length +
                           (provider.hasMore ? 1 : 0),
                       itemBuilder: (_, i) {
-                        // ── Load-more spinner at the bottom ──
                         if (i == provider.productList.length) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             context.read<ProductProvider>().loadMore();
@@ -484,8 +631,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                             ),
                           );
                         }
-
-                        // ── Normal product row ──
                         final p = provider.productList[i];
                         return _ProductRow(
                           product: p,
@@ -504,8 +649,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
               ),
             ),
             const SizedBox(height: 12),
-
-            // ── Cart ────────────────────────────────
             _Card(
               title: 'Selected Items (${_cart.length})',
               child: _cart.isEmpty
@@ -570,25 +713,48 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     );
   }
 
-  // ── Step 3: Review + Discount + Payment ───────────
   Widget _buildStep3() {
     final isPending = _paymentStatus == 'pending';
 
     return Column(
       children: [
-        // Customer summary
         _Card(
           title: 'Customer',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _nameCtrl.text,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _nameCtrl.text,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                  ),
+                  if (_hasCreditAvailable)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${_fmt(_lookedUpCustomer!.creditBalance)} credit',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.green,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 2),
               Text(
@@ -612,8 +778,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
           ),
         ),
         const SizedBox(height: 12),
-
-        // Items
         _Card(
           title: 'Items (${_cart.length})',
           child: Column(
@@ -665,8 +829,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
           ),
         ),
         const SizedBox(height: 12),
-
-        // Discount
         _Card(
           title: 'Discount (optional)',
           child: Column(
@@ -716,14 +878,11 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
           ),
         ),
         const SizedBox(height: 12),
-
-        // Payment Status
         _Card(
           title: 'Payment Status',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Status chips ─────────────────────
               Row(
                 children: [
                   _StatusChip(
@@ -735,8 +894,10 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                       _paymentStatus = 'pending';
                       _useCash = false;
                       _useOnline = false;
+                      _useCredit = false;
                       _cashCtrl.text = '0';
                       _onlineCtrl.text = '0';
+                      _creditCtrl.text = '0';
                     }),
                   ),
                   const SizedBox(width: 8),
@@ -757,22 +918,20 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     selected: _paymentStatus == 'paid',
                     onTap: () => setState(() {
                       _paymentStatus = 'paid';
-                      // Auto-fill cash with full total
                       _useCash = true;
                       _useOnline = false;
+                      _useCredit = false;
                       _cashCtrl.text = _total.toStringAsFixed(0);
                       _onlineCtrl.text = '0';
+                      _creditCtrl.text = '0';
                     }),
                   ),
                 ],
               ),
-
-              // ── Split payment UI ──────────────────
               if (_paymentStatus != 'pending') ...[
                 const SizedBox(height: 16),
                 const Divider(height: 1, color: AppColors.border),
                 const SizedBox(height: 14),
-
                 const Text(
                   'Payment Methods',
                   style: TextStyle(
@@ -783,69 +942,59 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                 ),
                 const SizedBox(height: 2),
                 const Text(
-                  'Enable one or both — entering cash auto-fills remaining as online',
+                  'Enable one or more — combine credit, cash, and online',
                   style: TextStyle(fontSize: 10, color: AppColors.textLight),
                 ),
                 const SizedBox(height: 12),
-
-                // ── Cash row ──────────────────────
+                if (_hasCreditAvailable) ...[
+                  _SplitPaymentRow(
+                    icon: Icons.account_balance_wallet_rounded,
+                    label: 'Credit',
+                    color: AppColors.green,
+                    isEnabled: _useCredit,
+                    controller: _creditCtrl,
+                    helperText:
+                        'Available: ${_fmt(_lookedUpCustomer!.creditBalance)}',
+                    onToggle: (val) => setState(() {
+                      _useCredit = val;
+                      if (!val) {
+                        _creditCtrl.text = '0';
+                      } else {
+                        _creditCtrl.text = _maxCreditApplicable.toStringAsFixed(
+                          0,
+                        );
+                      }
+                    }),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 _SplitPaymentRow(
                   icon: Icons.money_rounded,
                   label: 'Cash',
-                  color: AppColors.green,
+                  color: AppColors.primary,
                   isEnabled: _useCash,
                   controller: _cashCtrl,
                   onToggle: (val) => setState(() {
                     _useCash = val;
-                    if (!val) {
-                      _cashCtrl.text = '0';
-                    } else if (_useOnline) {
-                      // Recalculate online as remainder
-                      final cashAmt = double.tryParse(_cashCtrl.text) ?? 0;
-                      final remaining = _total - cashAmt;
-                      _onlineCtrl.text = remaining > 0
-                          ? remaining.toStringAsFixed(0)
-                          : '0';
-                    }
+                    if (!val) _cashCtrl.text = '0';
                   }),
-                  onChanged: (v) => setState(() {
-                    // Auto-fill online with remainder when both enabled
-                    if (_useOnline) {
-                      final cashAmt = double.tryParse(v) ?? 0;
-                      final remaining = _total - cashAmt;
-                      _onlineCtrl.text = remaining > 0
-                          ? remaining.toStringAsFixed(0)
-                          : '0';
-                    }
-                  }),
+                  onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 10),
-
-                // ── Online row ────────────────────
                 _SplitPaymentRow(
                   icon: Icons.phone_android_rounded,
                   label: 'Online',
-                  color: AppColors.primary,
+                  color: AppColors.orange,
                   isEnabled: _useOnline,
                   controller: _onlineCtrl,
                   onToggle: (val) => setState(() {
                     _useOnline = val;
-                    if (!val) {
-                      _onlineCtrl.text = '0';
-                    } else if (_useCash) {
-                      // Auto-fill online with remainder
-                      final cashAmt = double.tryParse(_cashCtrl.text) ?? 0;
-                      final remaining = _total - cashAmt;
-                      _onlineCtrl.text = remaining > 0
-                          ? remaining.toStringAsFixed(0)
-                          : '0';
-                    }
+                    if (!val) _onlineCtrl.text = '0';
                   }),
                   onChanged: (_) => setState(() {}),
                 ),
-
-                // ── Live payment summary ──────────
-                if (_useCash || _useOnline) ...[
+                if (_useCash || _useOnline || _useCredit) ...[
                   const SizedBox(height: 14),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -856,17 +1005,23 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     ),
                     child: Column(
                       children: [
+                        if (_useCredit)
+                          _PaySummaryRow(
+                            label: 'Credit',
+                            value: '₹${_creditAmount.toStringAsFixed(0)}',
+                            color: AppColors.green,
+                          ),
                         if (_useCash)
                           _PaySummaryRow(
                             label: 'Cash',
                             value: '₹${_cashAmount.toStringAsFixed(0)}',
-                            color: AppColors.green,
+                            color: AppColors.primary,
                           ),
                         if (_useOnline)
                           _PaySummaryRow(
                             label: 'Online',
                             value: '₹${_onlineAmount.toStringAsFixed(0)}',
-                            color: AppColors.primary,
+                            color: AppColors.orange,
                           ),
                         const Divider(height: 12, color: AppColors.border),
                         _PaySummaryRow(
@@ -889,8 +1044,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     ),
                   ),
                 ],
-
-                if (!_useCash && !_useOnline) ...[
+                if (!_useCash && !_useOnline && !_useCredit) ...[
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -911,13 +1065,38 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                   ),
                 ],
               ],
+              if (isPending && _hasCreditAvailable) ...[
+                const SizedBox(height: 16),
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 14),
+                _SplitPaymentRow(
+                  icon: Icons.account_balance_wallet_rounded,
+                  label: 'Apply Credit',
+                  color: AppColors.green,
+                  isEnabled: _useCredit,
+                  controller: _creditCtrl,
+                  helperText:
+                      'Available: ${_fmt(_lookedUpCustomer!.creditBalance)}',
+                  onToggle: (val) => setState(() {
+                    _useCredit = val;
+                    if (!val) {
+                      _creditCtrl.text = '0';
+                    } else {
+                      _creditCtrl.text = _maxCreditApplicable.toStringAsFixed(
+                        0,
+                      );
+                      // If credit fully covers total, auto-flip to 'partial'
+                      // (status stays partial since cash/online is 0 — backend handles)
+                      _paymentStatus = 'partial';
+                    }
+                  }),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
             ],
           ),
         ),
-
         const SizedBox(height: 12),
-
-        // Summary
         _Card(
           title: 'Summary',
           child: Column(
@@ -951,23 +1130,21 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                   ),
                 ],
               ),
+              if (_useCredit) ...[
+                const SizedBox(height: 8),
+                _SummaryRow(
+                  label: 'Credit applied',
+                  value: '− ${_fmt(_creditAmount)}',
+                  isRed: true,
+                ),
+              ],
               if (!isPending) ...[
                 const SizedBox(height: 8),
-                Builder(
-                  builder: (_) {
-                    final paid = double.tryParse(_cashCtrl.text) ?? 0;
-                    final due = (_total - paid).clamp(0, double.infinity);
-                    return Column(
-                      children: [
-                        _SummaryRow(label: 'Paid now', value: _fmt(paid)),
-                        _SummaryRow(
-                          label: 'Remaining due',
-                          value: _fmt(due.toDouble()),
-                          isRed: due > 0,
-                        ),
-                      ],
-                    );
-                  },
+                _SummaryRow(label: 'Total Paid', value: _fmt(_totalPaid)),
+                _SummaryRow(
+                  label: 'Remaining due',
+                  value: _amountDue > 0 ? _fmt(_amountDue) : _fmt(0),
+                  isRed: _amountDue > 0,
                 ),
               ],
             ],
@@ -978,7 +1155,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     );
   }
 
-  // ── Footer ────────────────────────────────────────
   Widget _buildFooter() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -1072,14 +1248,11 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
   );
 }
 
-// ─────────────────────────────────────────────────────
-// _CartItem
-// ─────────────────────────────────────────────────────
 class _CartItem {
   final ProductModel product;
   int qty;
   double unitPrice;
-  String? selectedSize; // always set (size is mandatory)
+  String? selectedSize;
   double itemDiscount;
 
   _CartItem({
@@ -1093,9 +1266,6 @@ class _CartItem {
   double get lineTotal => (unitPrice * qty) - itemDiscount;
 }
 
-// ─────────────────────────────────────────────────────
-// _StepIndicator
-// ─────────────────────────────────────────────────────
 class _StepIndicator extends StatelessWidget {
   final int step;
 
@@ -1192,9 +1362,6 @@ class _StepLine extends StatelessWidget {
   );
 }
 
-// ─────────────────────────────────────────────────────
-// _ProductRow — size chips from product.sizes + add button
-// ─────────────────────────────────────────────────────
 class _ProductRow extends StatelessWidget {
   final ProductModel product;
   final String? selectedSize;
@@ -1210,10 +1377,6 @@ class _ProductRow extends StatelessWidget {
     required this.onAdd,
   });
 
-  // ── Parse sizes from product.sizes string ──────────
-  // e.g. "S,M,L,XL,XXL" → ['S','M','L','XL','XXL']
-  // e.g. "28,30,32,34,36" → ['28','30','32','34','36']
-  // Free size product → ['Free Size']
   List<String> get _sizeOptions {
     if (product.isFreeSize) return ['Free Size'];
     final raw = product.sizes ?? '';
@@ -1231,7 +1394,6 @@ class _ProductRow extends StatelessWidget {
         .map((e) => e.selectedSize)
         .whereType<String>()
         .toSet();
-
     final sizes = _sizeOptions;
 
     return Container(
@@ -1247,7 +1409,6 @@ class _ProductRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Product name + price + add button ────
           Row(
             children: [
               Expanded(
@@ -1272,7 +1433,6 @@ class _ProductRow extends StatelessWidget {
                   ],
                 ),
               ),
-              // Cart badge
               if (cartEntries.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.only(right: 8),
@@ -1293,7 +1453,6 @@ class _ProductRow extends StatelessWidget {
                     ),
                   ),
                 ),
-              // Add button — disabled until size selected
               GestureDetector(
                 onTap: selectedSize != null ? onAdd : null,
                 child: AnimatedContainer(
@@ -1323,8 +1482,6 @@ class _ProductRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-
-          // ── Size chips from product.sizes ─────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -1404,8 +1561,6 @@ class _ProductRow extends StatelessWidget {
               ),
             ],
           ),
-
-          // ── Hint when no size selected ────────────
           if (selectedSize == null)
             Padding(
               padding: const EdgeInsets.only(top: 6),
@@ -1424,9 +1579,6 @@ class _ProductRow extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────
-// _CartRow — shows fixed size label (no size chips here)
-// ─────────────────────────────────────────────────────
 class _CartRow extends StatelessWidget {
   final _CartItem item;
   final VoidCallback onIncrement, onDecrement, onRemove;
@@ -1453,7 +1605,6 @@ class _CartRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Name + size badge + remove
           Row(
             children: [
               Expanded(
@@ -1509,12 +1660,9 @@ class _CartRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-
-          // Price + Qty + Total
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Editable price
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1564,8 +1712,6 @@ class _CartRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-
-              // Qty
               Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -1594,8 +1740,6 @@ class _CartRow extends StatelessWidget {
                 ],
               ),
               const SizedBox(width: 10),
-
-              // Line total
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -1622,9 +1766,7 @@ class _CartRow extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────
-// _SplitPaymentRow — toggle + amount field for one method
-// ─────────────────────────────────────────────────────
+// Now supports optional helperText shown under the label
 class _SplitPaymentRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1633,6 +1775,7 @@ class _SplitPaymentRow extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<bool> onToggle;
   final ValueChanged<String> onChanged;
+  final String? helperText;
 
   const _SplitPaymentRow({
     required this.icon,
@@ -1642,6 +1785,7 @@ class _SplitPaymentRow extends StatelessWidget {
     required this.controller,
     required this.onToggle,
     required this.onChanged,
+    this.helperText,
   });
 
   @override
@@ -1659,7 +1803,6 @@ class _SplitPaymentRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // ── Toggle ──────────────────────────────
           GestureDetector(
             onTap: () => onToggle(!isEnabled),
             child: AnimatedContainer(
@@ -1684,22 +1827,33 @@ class _SplitPaymentRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-
-          // ── Icon + Label ─────────────────────────
           Icon(icon, size: 18, color: isEnabled ? color : AppColors.textLight),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isEnabled ? color : AppColors.textMedium,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isEnabled ? color : AppColors.textMedium,
+                  ),
+                ),
+                if (helperText != null)
+                  Text(
+                    helperText!,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isEnabled
+                          ? color.withOpacity(0.8)
+                          : AppColors.textLight,
+                    ),
+                  ),
+              ],
             ),
           ),
-
-          const Spacer(),
-
-          // ── Amount field (only shown when enabled) ──
           if (isEnabled)
             SizedBox(
               width: 110,
@@ -1757,9 +1911,6 @@ class _SplitPaymentRow extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────
-// _PaySummaryRow — label + colored value in payment box
-// ─────────────────────────────────────────────────────
 class _PaySummaryRow extends StatelessWidget {
   final String label, value;
   final Color color;
@@ -1799,9 +1950,6 @@ class _PaySummaryRow extends StatelessWidget {
   );
 }
 
-// ─────────────────────────────────────────────────────
-// _StatusChip
-// ─────────────────────────────────────────────────────
 class _StatusChip extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -1851,66 +1999,6 @@ class _StatusChip extends StatelessWidget {
   );
 }
 
-// ─────────────────────────────────────────────────────
-// _MethodBtn
-// ─────────────────────────────────────────────────────
-class _MethodBtn extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _MethodBtn({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        height: 48,
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.primary.withOpacity(0.08)
-              : AppColors.pageBg,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.border,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: selected ? AppColors.primary : AppColors.textLight,
-            ),
-            const SizedBox(width: 7),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: selected ? AppColors.primary : AppColors.textMedium,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-// ─────────────────────────────────────────────────────
-// Shared small widgets
-// ─────────────────────────────────────────────────────
 class _Card extends StatelessWidget {
   final String title;
   final Widget child;

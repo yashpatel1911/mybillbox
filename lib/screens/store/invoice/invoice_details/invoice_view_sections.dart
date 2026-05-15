@@ -28,7 +28,12 @@ class InvoiceHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        // Tint border orange when overpayment is unresolved — subtle alert
+        border: Border.all(
+          color: invoice.hasUnresolvedOverpayment
+              ? AppColors.orange.withOpacity(0.4)
+              : AppColors.border,
+        ),
       ),
       child: Row(
         children: [
@@ -68,18 +73,22 @@ class InvoiceHeaderCard extends StatelessWidget {
                 Text(
                   invoice.invoiceDate,
                   style: const TextStyle(
-                      fontSize: 12, color: AppColors.textLight),
+                    fontSize: 12,
+                    color: AppColors.textLight,
+                  ),
                 ),
               ],
             ),
           ),
-          // Status + cancelled badge
+          // Status + cancelled badge + overpayment badge
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: c.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -96,8 +105,10 @@ class InvoiceHeaderCard extends StatelessWidget {
               if (invoice.isCancelled) ...[
                 const SizedBox(height: 4),
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.red.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -109,6 +120,39 @@ class InvoiceHeaderCard extends StatelessWidget {
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                     ),
+                  ),
+                ),
+              ],
+              // Unresolved overpayment badge — small alert next to status
+              if (invoice.hasUnresolvedOverpayment) ...[
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.orange.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 10,
+                        color: AppColors.orange,
+                      ),
+                      SizedBox(width: 3),
+                      Text(
+                        'Overpaid',
+                        style: TextStyle(
+                          color: AppColors.orange,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -128,6 +172,8 @@ class InvoiceCustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasCreditInfo = invoice.hasCustomerLink && invoice.creditBalance > 0;
+
     return DetailCard(
       title: 'Customer Details',
       child: Column(
@@ -136,12 +182,53 @@ class InvoiceCustomerCard extends StatelessWidget {
           DetailRow(label: 'Mobile', value: invoice.customerMobile),
           DetailRow(
             label: 'Date',
-            value: DateFormat('dd MMM yyyy').format(
-              DateTime.tryParse(invoice.invoiceDate) ?? DateTime.now(),
-            ),
+            value: DateFormat(
+              'dd MMM yyyy',
+            ).format(DateTime.tryParse(invoice.invoiceDate) ?? DateTime.now()),
           ),
           if (invoice.notes.isNotEmpty)
             DetailRow(label: 'Notes', value: invoice.notes),
+
+          // Credit balance display — shows what customer currently has
+          if (hasCreditInfo) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.green.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.green.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    size: 14,
+                    color: AppColors.green,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Available credit balance',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.green,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '₹${invoice.creditBalance.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -153,11 +240,7 @@ class InvoiceItemsCard extends StatelessWidget {
   final InvoiceModel invoice;
   final String Function(double) fmt;
 
-  const InvoiceItemsCard({
-    super.key,
-    required this.invoice,
-    required this.fmt,
-  });
+  const InvoiceItemsCard({super.key, required this.invoice, required this.fmt});
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +299,9 @@ class InvoiceItemsCard extends StatelessWidget {
                         Text(
                           'Discount: ₹${fmt(item.itemDiscount)}',
                           style: const TextStyle(
-                              fontSize: 11, color: AppColors.red),
+                            fontSize: 11,
+                            color: AppColors.red,
+                          ),
                         ),
                     ],
                   ),
@@ -251,6 +336,8 @@ class InvoiceSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasOverpayment = invoice.overpaidAmount > 0;
+
     return DetailCard(
       title: 'Payment Summary',
       child: Column(
@@ -259,7 +346,7 @@ class InvoiceSummaryCard extends StatelessWidget {
           if (invoice.discountType != null && invoice.discountAmount > 0)
             DetailRow(
               label:
-              'Discount (${invoice.discountType == 'percent' ? '${invoice.discountValue.toStringAsFixed(0)}%' : 'flat'})',
+                  'Discount (${invoice.discountType == 'percent' ? '${invoice.discountValue.toStringAsFixed(0)}%' : 'flat'})',
               value: '− ₹${fmt(invoice.discountAmount)}',
               valueColor: AppColors.red,
             ),
@@ -294,12 +381,40 @@ class InvoiceSummaryCard extends StatelessWidget {
             value: '₹${fmt(invoice.amountPaid)}',
             valueColor: AppColors.green,
           ),
-          DetailRow(
-            label: 'Amount Due',
-            value: '₹${fmt(invoice.amountDue)}',
-            valueColor:
-            invoice.amountDue > 0 ? AppColors.red : AppColors.green,
-          ),
+
+          // Overpayment lines — only shown when relevant
+          if (hasOverpayment) ...[
+            DetailRow(
+              label: 'Overpaid',
+              value: '₹${fmt(invoice.overpaidAmount)}',
+              valueColor: AppColors.orange,
+            ),
+            if (invoice.overpaymentResolved)
+              DetailRow(
+                label: 'Resolved by',
+                value: invoice.overpaymentAction == 'credit'
+                    ? 'Added to credit'
+                    : invoice.overpaymentAction == 'refund'
+                    ? 'Refunded'
+                    : '—',
+                valueColor: invoice.overpaymentAction == 'credit'
+                    ? AppColors.green
+                    : AppColors.primary,
+              )
+            else
+              const DetailRow(
+                label: 'Status',
+                value: 'Awaiting resolution',
+                valueColor: AppColors.orange,
+              ),
+          ] else
+            DetailRow(
+              label: 'Amount Due',
+              value: '₹${fmt(invoice.amountDue)}',
+              valueColor: invoice.amountDue > 0
+                  ? AppColors.red
+                  : AppColors.green,
+            ),
         ],
       ),
     );
@@ -340,9 +455,12 @@ class _AddPaymentCardState extends State<AddPaymentCard> {
   }
 
   double get _cashAmt => double.tryParse(_cashCtrl.text) ?? 0;
+
   double get _onlineAmt => double.tryParse(_onlineCtrl.text) ?? 0;
+
   double get _totalPaid =>
       (_useCash ? _cashAmt : 0) + (_useOnline ? _onlineAmt : 0);
+
   double get _amountDue => widget.invoice.amountDue;
 
   List<Map<String, dynamic>> get _payments {
@@ -356,8 +474,7 @@ class _AddPaymentCardState extends State<AddPaymentCard> {
 
   Future<void> _submit() async {
     if (!_useCash && !_useOnline) {
-      AppConstant.warningMessage(
-          'Select at least one payment method', context);
+      AppConstant.warningMessage('Select at least one payment method', context);
       return;
     }
     if (_totalPaid <= 0) {
@@ -365,8 +482,7 @@ class _AddPaymentCardState extends State<AddPaymentCard> {
       return;
     }
     if (_totalPaid > _amountDue) {
-      AppConstant.warningMessage(
-          'Total paid exceeds due amount', context);
+      AppConstant.warningMessage('Total paid exceeds due amount', context);
       return;
     }
     setState(() => _paying = true);
@@ -374,8 +490,7 @@ class _AddPaymentCardState extends State<AddPaymentCard> {
       final res = await context.read<InvoiceProvider>().addPayment(
         invoiceId: widget.invoiceId,
         payments: _payments,
-        paymentDate:
-        DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        paymentDate: DateFormat('yyyy-MM-dd').format(DateTime.now()),
       );
       if (!mounted) return;
       if (res['status'] == true) {
@@ -510,23 +625,27 @@ class _AddPaymentCardState extends State<AddPaymentCard> {
                 backgroundColor: AppColors.green,
                 minimumSize: const Size(0, 46),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 0,
               ),
               child: _paying
                   ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
-              )
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Text(
-                'Record Payment',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white),
-              ),
+                      'Record Payment',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ),
         ],

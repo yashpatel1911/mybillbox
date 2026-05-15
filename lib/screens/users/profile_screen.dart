@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import '../../DBHelper/app_colors.dart';
 import '../../DBHelper/session_manager.dart';
 import '../../provider/profile_provider.dart';
-import '../login_screen.dart';
+import 'login_screen.dart';
 import 'change_password_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {

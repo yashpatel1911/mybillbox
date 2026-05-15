@@ -1,8 +1,8 @@
 class DashboardStatsModel {
   final double totalBilled;
   final double totalCollected;
-  final double outstanding; // pending + partial + overdue due
-  final double overdueAmount; // only overdue invoices due (replaces totalDue)
+  final double outstanding;
+  final double overdueAmount;
   final int totalInvoices;
   final int paidCount;
   final int pendingCount;
@@ -13,6 +13,8 @@ class DashboardStatsModel {
   final double partialAmount;
   final double cashCollected;
   final double onlineCollected;
+  final double creditApplied;
+  final double refundsAmount;
 
   const DashboardStatsModel({
     required this.totalBilled,
@@ -29,6 +31,8 @@ class DashboardStatsModel {
     required this.partialAmount,
     required this.cashCollected,
     required this.onlineCollected,
+    required this.creditApplied,
+    required this.refundsAmount,
   });
 
   factory DashboardStatsModel.fromJson(Map<String, dynamic> json) {
@@ -41,7 +45,6 @@ class DashboardStatsModel {
       totalCollected: _d(json['total_collected']),
       outstanding: _d(json['outstanding']),
       overdueAmount: _d(json['overdue_amount']),
-      // replaces total_due
       totalInvoices: _i(json['total_invoices']),
       paidCount: _i(json['paid_count']),
       pendingCount: _i(json['pending_count']),
@@ -52,10 +55,11 @@ class DashboardStatsModel {
       partialAmount: _d(json['partial_amount']),
       cashCollected: _d(json['cash_collected']),
       onlineCollected: _d(json['online_collected']),
+      creditApplied: _d(json['credit_applied']),
+      refundsAmount: _d(json['refunds_amount']),
     );
   }
 
-  // ── Empty/zero state for initial load ──
   factory DashboardStatsModel.empty() => const DashboardStatsModel(
     totalBilled: 0,
     totalCollected: 0,
@@ -71,10 +75,11 @@ class DashboardStatsModel {
     partialAmount: 0,
     cashCollected: 0,
     onlineCollected: 0,
+    creditApplied: 0,
+    refundsAmount: 0,
   );
 }
 
-// ── Wrapper holding both today + all_time stats ──
 class DashboardStatsWrapper {
   final DashboardStatsModel today;
   final DashboardStatsModel allTime;

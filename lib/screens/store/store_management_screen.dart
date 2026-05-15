@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mybillbox/screens/store/category/category_page.dart';
-import 'package:mybillbox/screens/store/invoice/purchase_screen.dart';
+import 'package:mybillbox/screens/purchase_ui/purchase_screen.dart';
 import 'package:mybillbox/screens/store/products/product_page.dart';
 import '../../../DBHelper/app_colors.dart';
 import '../expense_ui/expense_categories_screen.dart';
