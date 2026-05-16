@@ -4,10 +4,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:mybillbox/screens/reports/period_picker.dart';
-import 'package:mybillbox/screens/reports/report_overview_tab.dart';
+import 'package:mybillbox/screens/reports/tab_screens/expenses_tab.dart';
+import 'package:mybillbox/screens/reports/tab_screens/report_overview_tab.dart';
+import 'package:mybillbox/screens/reports/tab_screens/sales_tab.dart';
 import 'package:provider/provider.dart';
 
-import '../../provider/reports_provider.dart';
+import '../../provider/reports_provider/reports_provider.dart';
+
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -58,7 +61,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
               unselectedLabelColor: Color(0xFF888888),
               indicatorColor: Color(0xFF1A3C6E),
               indicatorWeight: 2.5,
-              labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              labelStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
               tabs: [
                 Tab(text: 'Overview'),
                 Tab(text: 'Sales'),
@@ -70,15 +76,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
           body: Column(
             children: [
               Consumer<ReportsProvider>(
-                builder: (ctx, p, _) =>
-                    PeriodPicker(current: p.period, onChanged: p.setPeriod),
+                builder: (ctx, p, _) => PeriodPicker(
+                  current: p.period,
+                  onChanged: p.setPeriod,
+                ),
               ),
               const Expanded(
                 child: TabBarView(
                   children: [
                     OverviewTab(),
-                    _ComingSoonTab(label: 'Sales'),
-                    _ComingSoonTab(label: 'Expenses'),
+                    SalesTab(),
+                    ExpensesTab(),
                     _ComingSoonTab(label: 'P&L'),
                   ],
                 ),
@@ -93,7 +101,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
 class _ComingSoonTab extends StatelessWidget {
   final String label;
-
   const _ComingSoonTab({required this.label});
 
   @override

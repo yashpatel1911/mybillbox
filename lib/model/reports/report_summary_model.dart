@@ -1,4 +1,4 @@
-// Data model mirroring the /api/reports/summary/ response.
+// Data model mirroring the /api/reports_provider/summary/ response.
 // Backend sends Decimal as String (for precision) — we parse to double here.
 
 double _d(dynamic v) =>

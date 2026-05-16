@@ -1,5 +1,5 @@
 // Period picker — horizontal pills + computed range display.
-// Single source of truth for "what data is shown" on the reports screen.
+// Single source of truth for "what data is shown" on the reports_provider screen.
 
 import 'package:flutter/material.dart';
 import 'package:mybillbox/screens/reports/report_period.dart';

@@ -1,7 +1,7 @@
 class Environment {
   // local urls
-  final apiUrl = 'http://192.168.1.9:8000/api/app/';
-  final categoryImageUrl = 'http://192.168.1.9:8000/media/category_images/';
+  final apiUrl = 'http://192.168.0.100:8000/api/app/';
+  final categoryImageUrl = 'http://192.168.0.100:8000/media/category_images/';
 
   final login = 'login/';
 
@@ -70,4 +70,6 @@ class Environment {
 
   // reports
   String reportsSummary = 'reports/summary/';
+  String fetchReportsSales = 'reports/sales/';
+  String fetchReportsExpenses = 'reports/expenses/';
 }

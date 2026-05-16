@@ -6,7 +6,7 @@ import 'package:mybillbox/screens/reports/stat_card.dart';
 import 'package:mybillbox/screens/reports/trend_chart.dart';
 import 'package:provider/provider.dart';
 
-import '../../provider/reports_provider.dart';
+import '../../../provider/reports_provider/reports_provider.dart';
 
 class OverviewTab extends StatelessWidget {
   const OverviewTab({super.key});

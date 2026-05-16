@@ -1,4 +1,4 @@
-// Period selection model — drives the entire reports screen.
+// Period selection model — drives the entire reports_provider screen.
 // Owns the "what range is currently selected" + computes the actual
 // from/to dates that get sent to the API.
 

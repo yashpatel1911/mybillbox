@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-import '../../model/report_summary_model.dart';
+import '../../model/reports/report_summary_model.dart';
 
 class TrendChart extends StatelessWidget {
   final List<DailyTrendPoint> data;
@@ -186,6 +186,11 @@ class TrendChart extends StatelessWidget {
   }
 
   LineChartBarData _buildLine(List<FlSpot> spots, Color color) {
+    // Only render dots when:
+    //  - range is small enough that dots aren't crowded (≤31 days), AND
+    //  - the specific value is > 0 (skip zero-value dots which clutter the chart)
+    final showDots = spots.length <= 31;
+
     return LineChartBarData(
       spots: spots,
       isCurved: true,
@@ -193,7 +198,8 @@ class TrendChart extends StatelessWidget {
       color: color,
       barWidth: 2.5,
       dotData: FlDotData(
-        show: spots.length <= 31, // hide dots on very long ranges
+        show: showDots,
+        checkToShowDot: (spot, _) => spot.y > 0,
         getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
           radius: 3,
           color: Colors.white,
